@@ -15,6 +15,7 @@ from app.main import app
 from app.database.base import Base
 from app.core.config import settings
 from app.dependencies import get_session
+from app.api.models.profiles import Profile
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -28,7 +29,7 @@ async def async_engine():
 
     yield async_db_engine
 
-    async with async_db_engine.connect() as conn:
+    async with async_db_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
     await async_db_engine.dispose()
