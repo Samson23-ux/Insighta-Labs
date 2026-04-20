@@ -33,8 +33,10 @@ class Profile(Base):
 
     __table_args__ = (
         PrimaryKeyConstraint("id", name="profiles_id_pk"),
-        Index("idx_profiles_name", name),
-        Index("idx_profiles_gender", gender),
-        Index("idx_profiles_age_group", age_group),
+        Index("idx_profiles_age", age),
         Index("idx_profiles_country_id", country_id),
+        Index("idx_profiles_created_at", created_at),
+        Index("idx_profiles_gender_probability", gender_probability),
+        Index("idx_profiles_composite_1", country_id, age, gender),
+        Index("idx_profiles_composite_2", country_id, age, age_group),
     )
