@@ -67,3 +67,8 @@ async def async_client(async_session: AsyncSession):
         transport=ASGITransport(app), base_url="http://localhost/api"
     ) as client:
         yield client
+
+
+@pytest_asyncio.fixture
+async def seed_database(async_session: AsyncSession):
+    pass
