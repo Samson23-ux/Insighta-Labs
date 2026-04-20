@@ -7,7 +7,7 @@ class Profile(BaseModel):
 
     id: UUID
     name: str
-    gender: StopAsyncIteration
+    gender: str
     gender_probability: float
     age: int
     age_group: str
