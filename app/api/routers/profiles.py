@@ -56,6 +56,29 @@ async def get_all_profiles(
         sort_by,
         order,
         page,
-        limit
+        limit,
+    )
+    return ProfileResponse(data=profiles)
+
+
+@profile_router.get(
+    "/profiles/search",
+    status_code=200,
+    response_model=ProfileResponse,
+    description="Search for a profile using the allowed query words",
+)
+async def search_for_profiles(
+    q: Annotated[str, Query(description="Query field to search for profiles")],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    page: Annotated[str, Query(description="Select what page to view")] = "1",
+    limit: Annotated[
+        str, Query(description="Set the total profiles to return per page")
+    ] = "10",
+):
+    profiles: list[Profile] = await profile_service.search_for_profiles(
+        q,
+        page,
+        limit,
+        session,
     )
     return ProfileResponse(data=profiles)

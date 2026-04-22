@@ -36,7 +36,7 @@ async def test_search_profile(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_invalid_query(async_client: AsyncClient):
-    search_query: str = "young male greater than or equal to 17"
+    search_query: str = "young male with minimum age of 17"
 
     res: Response = await async_client.get(f"/profiles/search?q={search_query}")
 
