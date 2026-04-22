@@ -21,6 +21,6 @@ app.add_middleware(
 async def home():
     message: dict = {
         "status": "success",
-        "message": "Welcome to Profile Management API!",
+        "message": "Welcome to Profile Management and Query API!",
     }
     return message
