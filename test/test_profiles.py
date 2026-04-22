@@ -6,7 +6,6 @@ from httpx import AsyncClient, Response
 async def test_get_profiles(async_client: AsyncClient):
     res: Response = await async_client.get("/profiles")
     json_res = res.json()
-    print(res.url)
 
     assert len(json_res["data"]) >= 1
 

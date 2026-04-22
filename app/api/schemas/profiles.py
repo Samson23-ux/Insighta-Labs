@@ -1,4 +1,5 @@
 from uuid import UUID
+from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
@@ -14,7 +15,7 @@ class Profile(BaseModel):
     country_id: str
     country_name: str
     country_probability: float
-    created_at: str
+    created_at: datetime
 
 
 class ProfileResponse(BaseModel):

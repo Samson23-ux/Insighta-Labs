@@ -81,7 +81,7 @@ async def seed_database(async_session: AsyncSession):
     file_path: Path = Path(__file__).parent.parent / "app" / "scripts" / "seed_profiles.json"
 
     profiles: list[dict] = []
-    async with aiofiles.open(file_path, "r", encoding="utf-8") as json_file:
+    async with aiofiles.open(file_path, "rb") as json_file:
         i = 0
         async for v in ijson.items_async(json_file, "profiles.item"):
             if i >= 500:
