@@ -1,5 +1,10 @@
+import ijson
+import aiofiles
 import pytest_asyncio
+from uuid6 import uuid7
+from pathlib import Path
 from sqlalchemy.pool import NullPool
+from datetime import datetime, timezone
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -16,6 +21,7 @@ from app.database.base import Base
 from app.core.config import settings
 from app.dependencies import get_session
 from app.api.models.profiles import Profile
+from app.api.services.profile_service import profile_service
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -70,6 +76,20 @@ async def async_client(async_session: AsyncSession):
         yield client
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(autouse=True)
 async def seed_database(async_session: AsyncSession):
-    pass
+    file_path: Path = Path(__file__).parent.parent / "app" / "scripts" / "seed_profiles.json"
+
+    profiles: list[dict] = []
+    async with aiofiles.open(file_path, "r", encoding="utf-8") as json_file:
+        i = 0
+        async for v in ijson.items_async(json_file, "profiles.item"):
+            if i >= 500:
+                break
+
+            v["id"] = uuid7()
+            v["created_at"] = datetime.now(timezone.utc)
+            profiles.append(v)
+            i += 1
+
+    await profile_service.create_profiles(profiles, async_session)

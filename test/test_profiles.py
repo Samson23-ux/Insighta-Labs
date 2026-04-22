@@ -4,15 +4,9 @@ from httpx import AsyncClient, Response
 
 @pytest.mark.asyncio
 async def test_get_profiles(async_client: AsyncClient):
-    payload: dict = {"name": "sergio"}
-
-    await async_client.post(
-        "/profiles",
-        json=payload
-    )
-
     res: Response = await async_client.get("/profiles")
     json_res = res.json()
+    print(res.url)
 
     assert len(json_res["data"]) >= 1
 
@@ -36,7 +30,7 @@ async def test_search_profile(async_client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_invalid_query(async_client: AsyncClient):
-    search_query: str = "young male with minimum age of 17"
+    search_query: str = "boy with name samson"
 
     res: Response = await async_client.get(f"/profiles/search?q={search_query}")
 

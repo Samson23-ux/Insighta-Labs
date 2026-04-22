@@ -1,4 +1,5 @@
 import json
+import asyncio
 import aiofiles
 from uuid6 import uuid7
 from pathlib import Path
@@ -18,7 +19,6 @@ async_session = async_sessionmaker(
     autocommit=False,
     autoflush=False,
     class_=AsyncSession,
-    connect_args={"server_settings": {"timezone": "utc"}},
 )
 
 
@@ -41,14 +41,14 @@ async def seed_profiles():
 
             try:
                 async with aiofiles.open(file_path, "r", encoding="utf-8") as json_file:
-                    data: dict = json.load(json_file)
+                    data: dict = json.loads(await json_file.read())
                     profiles: list[dict] = data.get("profiles")
             except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError) as e:
                 raise ServerError() from e
 
             for profile in profiles:
-                profile["id"] = str(uuid7())
-                profile["created_at"] = datetime.now(timezone.utc).isoformat()
+                profile["id"] = uuid7()
+                profile["created_at"] = datetime.now(timezone.utc)
 
             await profile_service.create_profiles(profiles, session)
             await session.commit()
@@ -57,3 +57,7 @@ async def seed_profiles():
         raise ServerError() from e
     finally:
         await session.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(seed_profiles())

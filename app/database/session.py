@@ -10,6 +10,7 @@ from app.core.config import settings
 
 async_engine: AsyncEngine = create_async_engine(
     url=settings.ASYNC_DB_URL,
+    connect_args={"server_settings": {"timezone": "utc"}},
     pool_size=10,
     max_overflow=5,
     pool_timeout=10.0,
@@ -21,5 +22,4 @@ async_session = async_sessionmaker(
     autocommit=False,
     autoflush=False,
     class_=AsyncSession,
-    connect_args={"server_settings": {"timezone": "utc"}},
 )
