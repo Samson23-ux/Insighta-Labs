@@ -76,7 +76,7 @@ async def async_client(async_session: AsyncSession):
         yield client
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture
 async def seed_database(async_session: AsyncSession):
     file_path: Path = Path(__file__).parent.parent / "app" / "scripts" / "seed_profiles.json"
 

@@ -258,6 +258,9 @@ class ProfileService:
         ((gender_k, gender_v),) = gender.items()
         ((age_groups_k, age_groups_v),) = age_groups.items()
 
+        if not normalized_query:
+            raise QueryError()
+
         for i, q in enumerate(normalized_query):
             if q in processed:
                 continue

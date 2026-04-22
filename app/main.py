@@ -27,3 +27,6 @@ async def home():
         "message": "Welcome to Profile Management and Query API!",
     }
     return message
+
+
+from app.core import exception_handlers
