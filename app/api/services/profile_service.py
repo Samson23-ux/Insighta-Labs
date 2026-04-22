@@ -312,6 +312,9 @@ class ProfileService:
     async def create_profiles(self, profiles: list[dict], session: AsyncSession):
         await profile_repo.add_profiles_to_db(profiles, session)
 
+    async def _get_profiles(self, limit: int, session: AsyncSession) -> Sequence[Profile]:
+        return await profile_repo._get_profiles(limit, session)
+
     async def get_profiles(
         self,
         session: AsyncSession,

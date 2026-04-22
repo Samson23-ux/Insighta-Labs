@@ -8,6 +8,11 @@ from app.api.models.profiles import Profile
 class ProfileRepo:
     async def add_profiles_to_db(self, profiles: list[dict], session: AsyncSession):
         await session.execute(insert(Profile), profiles)
+    
+    async def _get_profiles(self, limit: int, session: AsyncSession):
+        res = await session.execute(select(Profile).limit(limit))
+        profiles: Sequence[Profile] = res.scalars().all()
+        return profiles
 
     async def get_profiles(
         self,
