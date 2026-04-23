@@ -99,9 +99,9 @@ The API will be available at `http://localhost:8000`
 
 ### Deployed
 
-- [Live App](<app url>)
+- [Live App](https://hng-stage2-task-production-11e5.up.railway.app)
 
-- [API Documentation](<docs url>)
+- [API Documentation](https://hng-stage2-task-production-11e5.up.railway.app/docs)
 
 ## Testing
 
