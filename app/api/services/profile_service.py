@@ -70,12 +70,12 @@ class ProfileService:
 
         if sort_by:
             sortable_fields: list = ["age", "created_at", "gender_probability"]
-            if await is_number(sort_by) or sort_by not in sortable_fields:
+            if await is_number(sort_by) or sort_by.lower() not in sortable_fields:
                 raise InvalidTypeError()
 
         if order:
             data_order: list = ["asc", "desc"]
-            if await is_number(order) or order not in data_order:
+            if await is_number(order) or order.lower() not in data_order:
                 raise InvalidTypeError()
 
         page: int | bool = await is_integer(page)

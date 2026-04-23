@@ -59,9 +59,9 @@ class ProfileRepo:
             stmt = stmt.where(Profile.country_probability >= min_country_probability)
 
         if sort_by:
-            sort = sortable_fields.get(sort_by)
+            sort = sortable_fields.get(sort_by.lower())
 
-            if order == "desc":
+            if order.lower() == "desc":
                 stmt = stmt.order_by(desc(sort))
             else:
                 stmt = stmt.order_by(sort)
