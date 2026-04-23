@@ -76,6 +76,7 @@ class ProfileRepo:
         self, q: dict, offset: int, limit: int, session: AsyncSession
     ) -> Sequence[Profile]:
         query = [v for _, v in q.items()]
+        print(query)
 
         stmt = select(Profile).where(*query).offset(offset).limit(limit)
 

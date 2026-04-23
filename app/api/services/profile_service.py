@@ -146,30 +146,30 @@ class ProfileService:
         return valid_words, country_dict
 
     async def process_range(
-        self,
-        i: int,
-        q: str,
-        normalized_query: list,
-        processed: list,
-        memory: list,
-        queries: dict,
+        self, i: int, q: str, normalized_query: list, processed: list
     ):
         query = None
-        if i + 2 > len(normalized_query) - 1:
+
+        ## when a word from the range class is used there needs
+        # to be at least one more index
+        if i + 1 > len(normalized_query) - 1:
             raise QueryError()
 
         first_int = normalized_query[i + 1]
+        if not isinstance(first_int, int):
+            raise QueryError()
+
         if q == "between":
+            if i + 2 > len(normalized_query) - 1:
+                raise QueryError()
+
             second_int: int = normalized_query[i + 2]
-            if not isinstance(first_int, int) or not isinstance(second_int, int):
+            if not isinstance(second_int, int):
                 raise QueryError()
 
             processed.append(second_int)
             query = and_(Profile.age >= first_int, Profile.age <= second_int)
         else:
-            if not isinstance(first_int, int):
-                raise QueryError()
-
             if q == "above":
                 query = Profile.age > first_int
             elif q == "below":
@@ -202,7 +202,7 @@ class ProfileService:
         next_query = None
         query_class = None
         if i == 0 or i == len(normalized_query) - 1:
-            raise QueryError
+            raise QueryError()
 
         last_query = queries.get(memory[-1])
 
@@ -213,10 +213,11 @@ class ProfileService:
             next_query = gender_v == next_word
         elif next_word in age_groups_k:
             query_class: str = age_groups_k[0]
-            next_query = age_groups_v == next_word
-        elif next_word == "young":
-            query_class: str = next_word
-            next_query = and_(Profile.age >= 16, Profile.age <= 24)
+
+            if next_word == "young":
+                next_query = and_(Profile.age >= 16, Profile.age <= 24)
+            else:
+                next_query = age_groups_v == next_word
         elif next_word in country_dict:
             query_class: str = "country_id"
             country_id: str = country_dict.get(next_word)
@@ -224,7 +225,7 @@ class ProfileService:
         elif next_word in range_query:
             query_class: str = "range"
             next_query: str = await self.process_range(
-                i + 1, next_word, normalized_query, processed, memory, queries
+                i + 1, next_word, normalized_query, processed
             )
         else:
             raise QueryError()
@@ -245,7 +246,7 @@ class ProfileService:
 
     async def map_query(self, normalized_query: list[str], country_dict: dict) -> dict:
         # Column mappings
-        gender: dict = {("gender", "male", "female"): Profile.gender}
+        gender: dict = {("gender", "male", "female", "young"): Profile.gender}
         range_query: list = ["above", "below", "equal", "maximum", "minimum", "between"]
         age_groups: dict = {
             ("age_group", "child", "teenager", "adult", "senior"): Profile.age_group
@@ -274,14 +275,13 @@ class ProfileService:
                 query_class: str = age_groups_k[0]
                 processed.append(q)
                 memory.append(query_class)
-                queries.update({query_class: age_groups_v == q})
-            elif q == "young":
-                query_class: str = age_groups_k[0]
-                processed.append(q)
-                memory.append(query_class)
-                queries.update(
-                    {query_class: and_(Profile.age >= 16, Profile.age <= 24)}
-                )
+
+                if q == "young":
+                    queries.update(
+                        {query_class: and_(Profile.age >= 16, Profile.age <= 24)}
+                    )
+                else:
+                    queries.update({query_class: age_groups_v == q})
             elif q in country_dict:
                 country_id: str = country_dict.get(q)
                 processed.append(q)
@@ -303,19 +303,21 @@ class ProfileService:
                     queries,
                 )
             elif q in range_query:
-                query = await self.process_range(
-                    i, q, normalized_query, processed, memory, queries
-                )
+                query = await self.process_range(i, q, normalized_query, processed)
                 processed.append(q)
                 memory.append("range")
                 queries.update({"range": query})
+            else:
+                raise QueryError()
 
         return queries
 
     async def create_profiles(self, profiles: list[dict], session: AsyncSession):
         await profile_repo.add_profiles_to_db(profiles, session)
 
-    async def _get_profiles(self, limit: int, session: AsyncSession) -> Sequence[Profile]:
+    async def _get_profiles(
+        self, limit: int, session: AsyncSession
+    ) -> Sequence[Profile]:
         return await profile_repo._get_profiles(limit, session)
 
     async def get_profiles(
@@ -388,6 +390,9 @@ class ProfileService:
     async def search_for_profiles(
         self, q: str, page: str, limit: str, session: AsyncSession
     ):
+        if not q:
+            raise ParameterError()
+
         if await is_number(q):
             raise InvalidTypeError()
 
@@ -422,5 +427,6 @@ class ProfileService:
                 raise ProfilesNotFoundError()
 
             raise ServerError() from e
+
 
 profile_service: ProfileService = ProfileService()
