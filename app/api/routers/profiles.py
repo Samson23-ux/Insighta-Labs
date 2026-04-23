@@ -19,9 +19,18 @@ profile_router = APIRouter()
 )
 async def get_all_profiles(
     session: Annotated[AsyncSession, Depends(get_session)],
-    gender: Annotated[str, Query(description="Filter profiles by gender (male, female)")] = None,
-    age_group: Annotated[str, Query(description="Filter profiles by age_group (child, teenager, adult, senior)")] = None,
-    country_id: Annotated[str, Query(description="Filter profiles by country code (2-letter ISO)")] = None,
+    gender: Annotated[
+        str, Query(description="Filter profiles by gender (male, female)")
+    ] = None,
+    age_group: Annotated[
+        str,
+        Query(
+            description="Filter profiles by age_group (child, teenager, adult, senior)"
+        ),
+    ] = None,
+    country_id: Annotated[
+        str, Query(description="Filter profiles by country code (2-letter ISO)")
+    ] = None,
     min_age: Annotated[
         str, Query(description="Set a minimum age to view profiles from")
     ] = None,
@@ -36,7 +45,7 @@ async def get_all_profiles(
         Query(description="Set a minimum country probability to view profiles from"),
     ] = None,
     sort_by: Annotated[
-        str, Query(description="Sort by age, created_at, gender_probability")
+        str, Query(description="Sort by any of (age, created_at, gender_probability)")
     ] = None,
     order: Annotated[str, Query(description="Order in asc or desc")] = None,
     page: Annotated[str, Query(description="Select what page to view")] = "1",
@@ -58,7 +67,7 @@ async def get_all_profiles(
         page,
         limit,
     )
-    return ProfileResponse(data=profiles)
+    return ProfileResponse(data=profiles, page=int(page), limit=int(limit), total=2026)
 
 
 @profile_router.get(
@@ -81,4 +90,4 @@ async def search_for_profiles(
         limit,
         session,
     )
-    return ProfileResponse(data=profiles)
+    return ProfileResponse(data=profiles, page=int(page), limit=int(limit), total=2026)

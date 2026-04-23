@@ -20,4 +20,7 @@ class Profile(BaseModel):
 
 class ProfileResponse(BaseModel):
     status: str = "success"
+    page: int
+    limit: int
+    total: int
     data: list[Profile]
