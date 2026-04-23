@@ -19,9 +19,9 @@ profile_router = APIRouter()
 )
 async def get_all_profiles(
     session: Annotated[AsyncSession, Depends(get_session)],
-    gender: Annotated[str, Query(description="Filter profiles by gender")] = None,
-    age_group: Annotated[str, Query(description="Filter profiles by age_group")] = None,
-    country_id: Annotated[str, Query(description="Filter profiles by country")] = None,
+    gender: Annotated[str, Query(description="Filter profiles by gender (male, female)")] = None,
+    age_group: Annotated[str, Query(description="Filter profiles by age_group (child, teenager, adult, senior)")] = None,
+    country_id: Annotated[str, Query(description="Filter profiles by country code (2-letter ISO)")] = None,
     min_age: Annotated[
         str, Query(description="Set a minimum age to view profiles from")
     ] = None,
