@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 from app.core.config import settings
-from app.api.routers.profiles import profile_router
+from app.api.routers.profiles import profile_router_v1
 
 
 app = FastAPI(title=settings.API_TITLE, version=settings.API_VERSION)
@@ -17,7 +17,7 @@ app.add_middleware(
     allow_credentials=True
 )
 
-app.include_router(profile_router, prefix=settings.API_PREFIX, tags=["Profiles"])
+app.include_router(profile_router_v1, prefix=settings.API_PREFIX, tags=["Profiles"])
 
 
 @app.get("/", status_code=200)

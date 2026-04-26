@@ -6,6 +6,7 @@ from app.main import app
 from app.core.exceptions import (
     QueryError,
     ServerError,
+    VersionError,
     AppException,
     ParameterError,
     InvalidTypeError,
@@ -66,5 +67,17 @@ app.add_exception_handler(
             "message": "No profiles found at the moment! Check back later",
         },
         status_code=404,
+    ),
+)
+
+
+app.add_exception_handler(
+    VersionError,
+    create_exception_handler(
+        initial_detail={
+            "status": "error",
+            "message": "API version header required",
+        },
+        status_code=400,
     ),
 )

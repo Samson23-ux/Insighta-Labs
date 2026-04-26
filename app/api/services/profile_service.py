@@ -5,19 +5,20 @@ from sqlalchemy.sql.elements import BooleanClauseList
 
 
 from app.api.models.profiles import Profile
-from app.api.repo.profile_repo import profile_repo
+from app.api.repo.profile_repo import profile_repo_v1
 from app.utils import is_integer, is_number, is_float
-from app.api.schemas.profiles import Profile as ProfileSchema
+from app.api.schemas.profiles import ProfileV1 as ProfileSchema
 from app.core.exceptions import (
     QueryError,
     ServerError,
+    VersionError,
     ParameterError,
     InvalidTypeError,
     ProfilesNotFoundError,
 )
 
 
-class ProfileService:
+class ProfileServiceV1:
     async def validate_parameters(
         self,
         gender: str | None,
@@ -313,16 +314,17 @@ class ProfileService:
         return queries
 
     async def create_profiles(self, profiles: list[dict], session: AsyncSession):
-        await profile_repo.add_profiles_to_db(profiles, session)
+        await profile_repo_v1.add_profiles_to_db(profiles, session)
 
     async def _get_profiles(
         self, limit: int, session: AsyncSession
     ) -> Sequence[Profile]:
-        return await profile_repo._get_profiles(limit, session)
+        return await profile_repo_v1._get_profiles(limit, session)
 
     async def get_profiles(
         self,
         session: AsyncSession,
+        version: str | None,
         gender: str | None,
         age_group: str | None,
         country_id: str | None,
@@ -335,6 +337,9 @@ class ProfileService:
         page: str,
         limit: str,
     ) -> list[ProfileSchema]:
+        if not version:
+            raise VersionError()
+
         (
             min_age,
             max_age,
@@ -359,7 +364,7 @@ class ProfileService:
         offset: int = (page * limit) - limit
 
         try:
-            profiles: Sequence[Profile] = await profile_repo.get_profiles(
+            profiles: Sequence[Profile] = await profile_repo_v1.get_profiles(
                 session,
                 gender,
                 age_group,
@@ -388,8 +393,11 @@ class ProfileService:
             raise ServerError() from e
 
     async def search_for_profiles(
-        self, q: str, page: str, limit: str, session: AsyncSession
+        self, q: str, page: str, limit: str, version: str | None, session: AsyncSession
     ):
+        if not version:
+            raise VersionError()
+
         if not q:
             raise ParameterError()
 
@@ -411,7 +419,7 @@ class ProfileService:
         mapped_query: dict = await self.map_query(normalized_query, country_dict)
 
         try:
-            profiles: Sequence[Profile] = await profile_repo.search_profiles(
+            profiles: Sequence[Profile] = await profile_repo_v1.search_profiles(
                 mapped_query, offset, limit, session
             )
 
@@ -429,4 +437,4 @@ class ProfileService:
             raise ServerError() from e
 
 
-profile_service: ProfileService = ProfileService()
+profile_service_v1: ProfileServiceV1 = ProfileServiceV1()

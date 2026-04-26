@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_encoding="utf-8")
 
     API_PREFIX: str = "/api"
-    API_TITLE: str = "Profile Management API"
+    API_TITLE: str = "Insighta Labs+"
     API_VERSION: str = "v1.0"
 
     # async db

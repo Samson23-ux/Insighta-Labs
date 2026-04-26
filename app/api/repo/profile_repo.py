@@ -5,7 +5,7 @@ from sqlalchemy import select, Sequence, func, desc, insert
 from app.api.models.profiles import Profile
 
 
-class ProfileRepo:
+class ProfileRepoV1:
     async def add_profiles_to_db(self, profiles: list[dict], session: AsyncSession):
         await session.execute(insert(Profile), profiles)
     
@@ -84,4 +84,4 @@ class ProfileRepo:
         return profiles
 
 
-profile_repo: ProfileRepo = ProfileRepo()
+profile_repo_v1: ProfileRepoV1 = ProfileRepoV1()

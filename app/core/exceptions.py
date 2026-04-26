@@ -39,6 +39,12 @@ class ServerError(AppException):
     pass
 
 
+class VersionError(AppException):
+    """Version header missing"""
+
+    pass
+
+
 def create_exception_handler(
     initial_detail: dict, status_code: int
 ) -> callable[[Request, AppException], JSONResponse]:

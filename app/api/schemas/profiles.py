@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
-class Profile(BaseModel):
+class ProfileV1(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -18,9 +18,9 @@ class Profile(BaseModel):
     created_at: datetime
 
 
-class ProfileResponse(BaseModel):
+class ProfileResponseV1(BaseModel):
     status: str = "success"
     page: int
     limit: int
     total: int
-    data: list[Profile]
+    data: list[ProfileV1]
