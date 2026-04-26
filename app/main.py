@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from httpx import AsyncClient
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -18,6 +20,19 @@ app.add_middleware(
 )
 
 app.include_router(profile_router_v1, prefix=settings.API_PREFIX, tags=["Profiles"])
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.agify = AsyncClient(base_url=settings.AGIFY_API_URL, timeout=10.0)
+    app.state.genderize = AsyncClient(base_url=settings.GENDERIZE_API_URL, timeout=10.0)
+    app.state.nationalize = AsyncClient(base_url=settings.NATIONALIZE_API_URL, timeout=10.0)
+
+    yield
+
+    await app.state.agify.aclose()
+    await app.state.genderize.aclose()
+    await app.state.nationalize.aclose()
 
 
 @app.get("/", status_code=200)

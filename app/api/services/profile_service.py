@@ -1,19 +1,26 @@
 import pycountry
+from uuid import UUID
+from uuid6 import uuid7
 from sqlalchemy import Sequence, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import BooleanClauseList
+from httpx import AsyncClient, Response, ConnectTimeout, ConnectError
 
 
 from app.api.models.profiles import Profile
 from app.api.repo.profile_repo import profile_repo_v1
 from app.utils import is_integer, is_number, is_float
-from app.api.schemas.profiles import ProfileV1 as ProfileSchema
+from app.api.schemas.profiles import ProfileCreateV1, ProfileV1 as ProfileSchema
 from app.core.exceptions import (
     QueryError,
     ServerError,
     VersionError,
+    ResponseError,
     ParameterError,
+    MissingNameError,
     InvalidTypeError,
+    CheckTimeoutError,
+    ProfileNotFoundError,
     ProfilesNotFoundError,
 )
 
@@ -312,6 +319,76 @@ class ProfileServiceV1:
                 raise QueryError()
 
         return queries
+    
+    async def agify_request(self, name: str, client: AsyncClient):
+        curr_retries: int = 0
+        total_retries: int = 5
+        status: str = "failure"
+
+        while curr_retries < total_retries and status != "success":
+            try:
+                res: Response = await client.get(f"/?name={name}")
+                status: str = "success"
+            except (ConnectTimeout, ConnectError):
+                curr_retries += 1
+
+        if status == "failure":
+            raise CheckTimeoutError()
+
+        json_res: dict = res.json()
+        age: str | None = json_res.get("age")
+
+        if not age:
+            raise ResponseError(external_api="Agify")
+
+        return json_res
+    
+    async def genderize_request(self, name: str, client: AsyncClient):
+        curr_retries: int = 0
+        total_retries: int = 5
+        status: str = "failure"
+
+        while curr_retries < total_retries and status != "success":
+            try:
+                res: Response = await client.get(f"/?name={name}")
+                status: str = "success"
+            except (ConnectTimeout, ConnectError):
+                curr_retries += 1
+
+        if status == "failure":
+            raise CheckTimeoutError()
+
+        json_res: dict = res.json()
+        gender: str | None = json_res.get("gender")
+        sample_size: int = json_res.get("count")
+
+        if not gender or sample_size == 0:
+            raise ResponseError(external_api="Genderize")
+
+        return json_res
+    
+    async def nationalize_request(self, name: str, client: AsyncClient):
+        curr_retries: int = 0
+        total_retries: int = 5
+        status: str = "failure"
+
+        while curr_retries < total_retries and status != "success":
+            try:
+                res: Response = await client.get(f"/?name={name}")
+                status: str = "success"
+            except (ConnectTimeout, ConnectError):
+                curr_retries += 1
+
+        if status == "failure":
+            raise CheckTimeoutError()
+
+        json_res: dict = res.json()
+        country: list = json_res.get("country")
+
+        if len(country) < 1:
+            raise ResponseError(external_api="Nationalize")
+
+        return json_res
 
     async def create_profiles(self, profiles: list[dict], session: AsyncSession):
         await profile_repo_v1.add_profiles_to_db(profiles, session)
@@ -434,6 +511,109 @@ class ProfileServiceV1:
             if isinstance(e, ProfilesNotFoundError):
                 raise ProfilesNotFoundError()
 
+            raise ServerError() from e
+        
+    async def get_profile(self, profile_id: UUID, session: AsyncSession) -> ProfileSchema:
+        try:
+            profile: Profile | None = await profile_repo_v1.get_profile(
+                profile_id, session
+            )
+
+            if not profile:
+                raise ProfileNotFoundError(profile_id=profile_id)
+
+            profile_out: ProfileSchema = ProfileSchema.model_validate(profile)
+            return profile_out
+        except Exception as e:
+            if isinstance(e, ProfileNotFoundError):
+                raise ProfileNotFoundError(profile_id=profile_id)
+
+            raise ServerError() from e
+
+    async def create_profile(
+        self, profile_create: ProfileCreateV1, client: tuple, session: AsyncSession
+    ) -> ProfileSchema:
+        name: str = profile_create.name
+
+        if not name:
+            raise MissingNameError()
+        
+        if await is_number(name):
+            raise InvalidTypeError()
+
+        existing_profile: Profile | None = await profile_repo_v1.get_profile_by_name(
+            name, session
+        )
+
+        if existing_profile:
+            existing_profile_out: ProfileSchema = ProfileSchema.model_validate(existing_profile)
+            return {"data": existing_profile_out, "exists": True}
+        
+        agify_client, genderize_client, nationalize_client = client
+
+        agify_res: dict = await self.agify_request(name, agify_client)
+        genderize_res: dict = await self.genderize_request(name, genderize_client)
+        nationalize_res: dict = await self.nationalize_request(name, nationalize_client)
+
+        age: int = agify_res.get("age")
+
+        if age >= 0 and age <= 12:
+            age_group: str = "child"
+        elif age >= 13 and age <= 19:
+            age_group: str = "teenager"
+        elif age >= 20 and age <= 59:
+            age_group: str = "adult"
+        elif age >= 60:
+            age_group: str = "senior"
+
+        country: dict = {}
+        max_probability = 0
+        countries: list[dict] = nationalize_res.get("country")
+
+        for c in countries:
+            probability: float = c.get("probability")
+            if probability > max_probability:
+                country: dict = c
+                max_probability: float = probability
+
+        country_name: str = pycountry.countries.get(alpha_2=country.get("country_id"))
+
+        profile_db: Profile = Profile(
+            id=uuid7(),
+            name=name,
+            gender=genderize_res.get("gender"),
+            gender_probability=genderize_res.get("probability"),
+            age=age,
+            age_group=age_group,
+            country_id=country.get("country_id"),
+            country_name=country_name,
+            country_probability=country.get("probability"),
+        )
+
+        try:
+            await profile_repo_v1.add_profile_to_db(profile_db, session)
+            profile_id: UUID = profile_db.id
+
+            profile: Profile = await profile_repo_v1.get_profile(profile_id, session)
+            profile_out: ProfileSchema = ProfileSchema.model_validate(profile)
+
+            await session.commit()
+            return {"data": profile_out, "exists": False}
+        except Exception as e:
+            await session.rollback()
+            raise ServerError() from e
+        
+    async def delete_profile(self, profile_id: UUID, session: AsyncSession):
+        profile: Profile | None = await profile_repo_v1.get_profile(profile_id, session)
+
+        if not profile:
+            raise ProfileNotFoundError(profile_id=profile_id)
+
+        try:
+            await profile_repo_v1.delete_profile(profile, session)
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
             raise ServerError() from e
 
 

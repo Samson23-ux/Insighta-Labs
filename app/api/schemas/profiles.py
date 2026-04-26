@@ -18,9 +18,17 @@ class ProfileV1(BaseModel):
     created_at: datetime
 
 
+class ProfileCreateV1(BaseModel):
+    name: str = None
+
+
 class ProfileResponseV1(BaseModel):
     status: str = "success"
     page: int
     limit: int
     total: int
     data: list[ProfileV1]
+
+
+class ProfileExistV1(ProfileResponseV1):
+    message: str = "Profile already exists"

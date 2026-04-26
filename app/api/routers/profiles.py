@@ -1,11 +1,12 @@
+from uuid import UUID
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, Query, Request
 
 
-from app.dependencies import get_session
+from app.dependencies import get_session, get_client
 from app.api.services.profile_service import profile_service_v1
-from app.api.schemas.profiles import ProfileV1, ProfileResponseV1
+from app.api.schemas.profiles import ProfileV1, ProfileResponseV1, ProfileCreateV1, ProfileExistV1
 
 
 profile_router_v1 = APIRouter()
@@ -97,3 +98,47 @@ async def search_for_profiles(
         session,
     )
     return ProfileResponseV1(data=profiles, page=int(page), limit=int(limit), total=2026)
+
+
+@profile_router_v1.get(
+    "/profiles/{profile_id}",
+    status_code=200,
+    response_model=ProfileResponseV1,
+    description="Get a profile",
+)
+async def get_profile_by_id(
+    profile_id: UUID, session: Annotated[AsyncSession, Depends(get_session)]
+):
+    profile: ProfileV1 = await profile_service_v1.get_profile(profile_id, session)
+    return ProfileResponseV1(data=profile)
+
+
+@profile_router_v1.post(
+    "/profiles",
+    status_code=201,
+    response_model=ProfileExistV1 | ProfileResponseV1,
+    description="Create a profile",
+)
+async def create_profile(
+    profile_create: ProfileCreateV1,
+    client: Annotated[tuple, Depends(get_client)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    profile_data: dict = await profile_service_v1.create_profile(profile_create, client, session)
+    exists: bool = profile_data.get("exists")
+    user_profile: ProfileV1 = profile_data.get("data")
+
+    return (
+        ProfileExistV1(data=user_profile)
+        if exists
+        else ProfileResponseV1(data=user_profile)
+    )
+
+
+@profile_router_v1.delete(
+    "/profiles/{profile_id}", status_code=204, description="Delete a profile"
+)
+async def delete_profile(
+    profile_id: UUID, session: Annotated[AsyncSession, Depends(get_session)]
+):
+    await profile_service_v1.delete_profile(profile_id, session)

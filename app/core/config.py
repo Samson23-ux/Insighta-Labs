@@ -17,4 +17,9 @@ class Settings(BaseSettings):
     # test db
     ASYNC_TEST_DB_URL: str
 
+    # external api
+    AGIFY_API_URL: str
+    NATIONALIZE_API_URL: str
+    GENDERIZE_API_URL: str
+
 settings: Settings = Settings()

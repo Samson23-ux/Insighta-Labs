@@ -1,3 +1,4 @@
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Sequence, func, desc, insert
 
@@ -82,6 +83,30 @@ class ProfileRepoV1:
         res = await session.execute(stmt)
         profiles: Sequence[Profile] = res.scalars().all()
         return profiles
+    
+    async def get_profile(
+        self, profile_id: UUID, session: AsyncSession
+    ) -> Profile | None:
+        stmt = select(Profile).where(Profile.id == profile_id)
+        res = await session.execute(stmt)
+        profile: Profile | None = res.scalar()
+        return profile
+    
+    async def get_profile_by_name(
+        self, name: str, session: AsyncSession
+    ) -> Profile | None:
+        stmt = select(Profile).where(Profile.name == name)
+        res = await session.execute(stmt)
+        profile: Profile | None = res.scalar()
+        return profile
 
+    async def add_profile_to_db(self, profile: Profile, session: AsyncSession):
+        session.add(profile)
+        await session.flush()
+        await session.refresh(profile)
+
+    async def delete_profile(self, profile: Profile, session: AsyncSession):
+        await session.delete(profile)
+        await session.flush()
 
 profile_repo_v1: ProfileRepoV1 = ProfileRepoV1()
