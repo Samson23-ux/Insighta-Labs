@@ -4,9 +4,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, Query, Request
 
 
-from app.dependencies import get_session, get_client
+from app.api.models.users import User
 from app.api.services.profile_service import profile_service_v1
-from app.api.schemas.profiles import ProfileV1, ProfileResponseV1, ProfileCreateV1, ProfileExistV1
+from app.dependencies import get_session, get_client, required_roles
+from app.api.schemas.profiles import (
+    ProfileV1,
+    ProfileExistV1,
+    ProfileCreateV1,
+    ProfileResponseV1,
+)
 
 
 profile_router_v1 = APIRouter()
@@ -20,6 +26,7 @@ profile_router_v1 = APIRouter()
 )
 async def get_all_profiles(
     request: Request,
+    _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
     session: Annotated[AsyncSession, Depends(get_session)],
     gender: Annotated[
         str, Query(description="Filter profiles by gender (male, female)")
@@ -71,7 +78,9 @@ async def get_all_profiles(
         page,
         limit,
     )
-    return ProfileResponseV1(data=profiles, page=int(page), limit=int(limit), total=2026)
+    return ProfileResponseV1(
+        data=profiles, page=int(page), limit=int(limit), total=2026
+    )
 
 
 @profile_router_v1.get(
@@ -82,8 +91,9 @@ async def get_all_profiles(
 )
 async def search_for_profiles(
     request: Request,
-    q: Annotated[str, Query(description="Query field to search for profiles")],
+    _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
     session: Annotated[AsyncSession, Depends(get_session)],
+    q: Annotated[str, Query(description="Query field to search for profiles")],
     page: Annotated[str, Query(description="Select what page to view")] = "1",
     limit: Annotated[
         str, Query(description="Set the total profiles to return per page")
@@ -97,7 +107,9 @@ async def search_for_profiles(
         version,
         session,
     )
-    return ProfileResponseV1(data=profiles, page=int(page), limit=int(limit), total=2026)
+    return ProfileResponseV1(
+        data=profiles, page=int(page), limit=int(limit), total=2026
+    )
 
 
 @profile_router_v1.get(
@@ -107,7 +119,9 @@ async def search_for_profiles(
     description="Get a profile",
 )
 async def get_profile_by_id(
-    profile_id: UUID, session: Annotated[AsyncSession, Depends(get_session)]
+    profile_id: UUID,
+    _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
+    session: Annotated[AsyncSession, Depends(get_session)]
 ):
     profile: ProfileV1 = await profile_service_v1.get_profile(profile_id, session)
     return ProfileResponseV1(data=profile)
@@ -121,10 +135,13 @@ async def get_profile_by_id(
 )
 async def create_profile(
     profile_create: ProfileCreateV1,
+    _: Annotated[User, Depends(required_roles(["admin"]))],
     client: Annotated[tuple, Depends(get_client)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    profile_data: dict = await profile_service_v1.create_profile(profile_create, client, session)
+    profile_data: dict = await profile_service_v1.create_profile(
+        profile_create, client, session
+    )
     exists: bool = profile_data.get("exists")
     user_profile: ProfileV1 = profile_data.get("data")
 
@@ -139,6 +156,8 @@ async def create_profile(
     "/profiles/{profile_id}", status_code=204, description="Delete a profile"
 )
 async def delete_profile(
-    profile_id: UUID, session: Annotated[AsyncSession, Depends(get_session)]
+    profile_id: UUID,
+    _: Annotated[User, Depends(required_roles(["admin"]))],
+    session: Annotated[AsyncSession, Depends(get_session)]
 ):
     await profile_service_v1.delete_profile(profile_id, session)

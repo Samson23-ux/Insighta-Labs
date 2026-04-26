@@ -22,4 +22,11 @@ class Settings(BaseSettings):
     NATIONALIZE_API_URL: str
     GENDERIZE_API_URL: str
 
+    # JWT
+    JWT_ALGORITHM: str
+    ACCESS_TOKEN_EXPIRE_TIME: int
+    REFRESH_TOKEN_EXPIRE_TIME: int
+    ACCESS_TOKEN_SECRET_KEY: str
+    REFRESH_TOKEN_SECRET_KEY: str
+
 settings: Settings = Settings()

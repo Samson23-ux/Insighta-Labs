@@ -74,6 +74,26 @@ class ResponseError(AppException):
     pass
 
 
+class AuthenticationError(AppException):
+    """User not authenticated"""
+
+    pass
+
+
+class AuthorizationError(AppException):
+    """User not authorized"""
+
+    pass
+
+
+class UserNotFoundError(AppException):
+    """User not found"""
+    def __init__(self, user_id: UUID):
+        self.user_id = user_id
+
+    pass
+
+
 def create_exception_handler(
     initial_detail: dict, status_code: int
 ) -> callable[[Request, AppException], JSONResponse]:

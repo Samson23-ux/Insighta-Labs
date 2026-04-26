@@ -319,7 +319,7 @@ class ProfileServiceV1:
                 raise QueryError()
 
         return queries
-    
+
     async def agify_request(self, name: str, client: AsyncClient):
         curr_retries: int = 0
         total_retries: int = 5
@@ -342,7 +342,7 @@ class ProfileServiceV1:
             raise ResponseError(external_api="Agify")
 
         return json_res
-    
+
     async def genderize_request(self, name: str, client: AsyncClient):
         curr_retries: int = 0
         total_retries: int = 5
@@ -366,7 +366,7 @@ class ProfileServiceV1:
             raise ResponseError(external_api="Genderize")
 
         return json_res
-    
+
     async def nationalize_request(self, name: str, client: AsyncClient):
         curr_retries: int = 0
         total_retries: int = 5
@@ -512,8 +512,10 @@ class ProfileServiceV1:
                 raise ProfilesNotFoundError()
 
             raise ServerError() from e
-        
-    async def get_profile(self, profile_id: UUID, session: AsyncSession) -> ProfileSchema:
+
+    async def get_profile(
+        self, profile_id: UUID, session: AsyncSession
+    ) -> ProfileSchema:
         try:
             profile: Profile | None = await profile_repo_v1.get_profile(
                 profile_id, session
@@ -537,7 +539,7 @@ class ProfileServiceV1:
 
         if not name:
             raise MissingNameError()
-        
+
         if await is_number(name):
             raise InvalidTypeError()
 
@@ -546,9 +548,11 @@ class ProfileServiceV1:
         )
 
         if existing_profile:
-            existing_profile_out: ProfileSchema = ProfileSchema.model_validate(existing_profile)
+            existing_profile_out: ProfileSchema = ProfileSchema.model_validate(
+                existing_profile
+            )
             return {"data": existing_profile_out, "exists": True}
-        
+
         agify_client, genderize_client, nationalize_client = client
 
         agify_res: dict = await self.agify_request(name, agify_client)
@@ -602,7 +606,7 @@ class ProfileServiceV1:
         except Exception as e:
             await session.rollback()
             raise ServerError() from e
-        
+
     async def delete_profile(self, profile_id: UUID, session: AsyncSession):
         profile: Profile | None = await profile_repo_v1.get_profile(profile_id, session)
 
