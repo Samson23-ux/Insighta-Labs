@@ -1,5 +1,6 @@
 import enum
 from uuid import UUID
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -16,6 +17,12 @@ class TokenDataV1(BaseModel):
 class AccessTokenCreateV1(BaseModel):
     refresh_token: str = Field(
         ..., description="A valid refresh token that is currently being used"
+    )
+
+
+class APIClientV1(BaseModel):
+    client: Optional[str] = Field(
+        default=None, description="client attribute must be set to web for web clients"
     )
 
 
