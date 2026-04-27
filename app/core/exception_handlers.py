@@ -16,6 +16,7 @@ from app.core.exceptions import (
     UserNotFoundError,
     AuthorizationError,
     AuthenticationError,
+    UnverifiedEmailError,
     ProfileNotFoundError,
     ProfilesNotFoundError,
     create_exception_handler
@@ -169,6 +170,18 @@ app.add_exception_handler(
         initial_detail={
             "status": "error",
             "message": "User with id not found with id {user_id}",
+        },
+    ),
+)
+
+
+app.add_exception_handler(
+    exc_class_or_status_code=UnverifiedEmailError,
+    handler=create_exception_handler(
+        status_code=400,
+        initial_detail={
+            "status": "error",
+            "message": "User email not verified",
         },
     ),
 )

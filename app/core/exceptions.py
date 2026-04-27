@@ -94,6 +94,12 @@ class UserNotFoundError(AppException):
     pass
 
 
+class UnverifiedEmailError(AppException):
+    """unverified email provided"""
+
+    pass
+
+
 def create_exception_handler(
     initial_detail: dict, status_code: int
 ) -> callable[[Request, AppException], JSONResponse]:

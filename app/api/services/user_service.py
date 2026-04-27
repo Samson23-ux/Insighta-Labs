@@ -16,5 +16,15 @@ class UserServiceV1:
 
         return user
 
+    async def get_user_by_email(self, user_email: str, session: AsyncSession) -> User:
+        user: User | None = await user_repo_v1.get_user_by_email(user_email, session)
+        return user
+
+    async def create_user(self, user: User, session: AsyncSession):
+        await user_repo_v1.add_user_to_db(user, session)
+
+    async def update_user(self, user: User, session: AsyncSession):
+        await user_repo_v1.add_user_to_db(user, session)
+
 
 user_service_v1 = UserServiceV1()

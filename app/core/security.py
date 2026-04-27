@@ -15,6 +15,10 @@ async def hash_token(token: str):
     return hashlib.sha256(token_bytes).hexdigest()
 
 
+async def hash_code_challenge(code_challenge: str):
+    return hashlib.sha256(code_challenge.encode(encoding="utf-8"))
+
+
 async def create_access_token(
     token_data: TokenDataV1, expire_time: Optional[int] = None
 ) -> str:
@@ -97,5 +101,5 @@ async def decode_token(token: str, key: str):
             token=token, key=key, algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
-    except JWTError as e:
+    except JWTError:
         return None
