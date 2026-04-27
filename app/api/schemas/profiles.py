@@ -24,9 +24,16 @@ class ProfileCreateV1(BaseModel):
 
 class ProfileResponseV1(BaseModel):
     status: str = "success"
+    data: ProfileV1
+
+
+class PaginatedResponseV1(BaseModel):
+    status: str = "success"
     page: int
     limit: int
-    total: int
+    total: int = 2026
+    total_pages: int = 203
+    links: dict
     data: list[ProfileV1]
 
 
