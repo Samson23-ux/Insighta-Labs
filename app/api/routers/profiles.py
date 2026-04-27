@@ -12,6 +12,7 @@ from app.api.schemas.profiles import (
     ProfileExistV1,
     ProfileCreateV1,
     ProfileResponseV1,
+    PaginatedResponseV1,
 )
 
 
@@ -21,7 +22,7 @@ profile_router_v1 = APIRouter()
 @profile_router_v1.get(
     "/profiles",
     status_code=200,
-    response_model=ProfileResponseV1,
+    response_model=PaginatedResponseV1,
     description="Get all profile",
 )
 async def get_all_profiles(
@@ -63,7 +64,7 @@ async def get_all_profiles(
     ] = "10",
 ):
     version: str | None = request.headers.get("X-API-Version")
-    profiles: list[ProfileV1] = await profile_service_v1.get_profiles(
+    data: dict = await profile_service_v1.get_profiles(
         session,
         version,
         gender,
@@ -78,15 +79,18 @@ async def get_all_profiles(
         page,
         limit,
     )
-    return ProfileResponseV1(
-        data=profiles, page=int(page), limit=int(limit), total=2026
+
+    links: dict = data.get("links")
+    profiles: list[ProfileV1] = data.get("profiles")
+    return PaginatedResponseV1(
+        data=profiles, page=int(page), limit=int(limit), links=links
     )
 
 
 @profile_router_v1.get(
     "/profiles/search",
     status_code=200,
-    response_model=ProfileResponseV1,
+    response_model=PaginatedResponseV1,
     description="Search for a profile using the allowed query words",
 )
 async def search_for_profiles(
@@ -100,15 +104,18 @@ async def search_for_profiles(
     ] = "10",
 ):
     version: str | None = request.headers.get("X-API-Version")
-    profiles: list[ProfileV1] = await profile_service_v1.search_for_profiles(
+    data: dict = await profile_service_v1.search_for_profiles(
         q,
         page,
         limit,
         version,
         session,
     )
-    return ProfileResponseV1(
-        data=profiles, page=int(page), limit=int(limit), total=2026
+
+    links: dict = data.get("links")
+    profiles: list[ProfileV1] = data.get("profiles")
+    return PaginatedResponseV1(
+        data=profiles, page=int(page), limit=int(limit), links=links
     )
 
 

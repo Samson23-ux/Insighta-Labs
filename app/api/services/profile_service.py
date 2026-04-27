@@ -413,7 +413,7 @@ class ProfileServiceV1:
         order: str | None,
         page: str,
         limit: str,
-    ) -> list[ProfileSchema]:
+    ) -> dict:
         if not version:
             raise VersionError()
 
@@ -459,10 +459,25 @@ class ProfileServiceV1:
             if not profiles:
                 raise ProfilesNotFoundError()
 
+            data: dict = {}
             profiles_out: list[ProfileSchema] = []
+
             for profile in profiles:
                 profiles_out.append(ProfileSchema.model_validate(profile))
-            return profiles_out
+
+            next_page: str | None = f"/api/profiles?page={str(page+1)}&limit={str(limit)}" if page < 203 else None
+            prev_page: str | None = f"/api/profiles?page={str(page-1)}&limit={str(limit)}" if page > 1 else None
+
+            links: dict = {
+                "self": f"/api/profiles?page={str(page)}&limit={str(limit)}",
+                "next": next_page,
+                "prev": prev_page
+            }
+
+            data["links"] = links
+            data["profiles"] = profiles_out
+
+            return data
         except Exception as e:
             if isinstance(e, ProfilesNotFoundError):
                 raise ProfilesNotFoundError()
@@ -471,7 +486,7 @@ class ProfileServiceV1:
 
     async def search_for_profiles(
         self, q: str, page: str, limit: str, version: str | None, session: AsyncSession
-    ):
+    ) -> dict:
         if not version:
             raise VersionError()
 
@@ -503,10 +518,25 @@ class ProfileServiceV1:
             if not profiles:
                 raise ProfilesNotFoundError()
 
+            data: dict = {}
             profiles_out: list[ProfileSchema] = []
+
             for profile in profiles:
                 profiles_out.append(ProfileSchema.model_validate(profile))
-            return profiles_out
+                
+            next_page: str | None = f"/api/profiles?page={str(page+1)}&limit={str(limit)}" if page < 203 else None
+            prev_page: str | None = f"/api/profiles?page={str(page-1)}&limit={str(limit)}" if page > 1 else None
+
+            links: dict = {
+                "self": f"/api/profiles?page={str(page)}&limit={str(limit)}",
+                "next": next_page,
+                "prev": prev_page
+            }
+
+            data["links"] = links
+            data["profiles"] = profiles_out
+
+            return data
         except Exception as e:
             if isinstance(e, ProfilesNotFoundError):
                 raise ProfilesNotFoundError()
