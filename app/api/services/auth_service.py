@@ -72,15 +72,12 @@ class AuthServiceV1:
         return json_res
 
     async def sign_up_with_github(
-        self, request: Request, session: AsyncSession
+        self, request: Request, code: str, url_state: str, session: AsyncSession
     ) -> dict:
         client_data: dict = request.session.get("client_data")
 
         state: str = client_data.get("state")
         code_verifier: str = client_data.get("code_challenge")
-
-        code: str = request.query_params.get("code")
-        url_state: str = request.query_params.get("state")
 
         if state != url_state:
             raise AuthorizationError()
@@ -106,7 +103,6 @@ class AuthServiceV1:
                 )
 
                 status: str = "success"
-                res.raise_for_status()
             except (ConnectError, ConnectTimeout):
                 curr_retries += 1
 
@@ -128,10 +124,10 @@ class AuthServiceV1:
             )
             user_email: dict = next(e for e in user_emails if e["primary"])
 
-        if not user_email["verified"]:
-            raise UnverifiedEmailError()
+            if not user_email["verified"]:
+                raise UnverifiedEmailError()
 
-        user_profile["email"] = user_email["email"]
+            user_profile["email"] = user_email["email"]
 
         user: User = await user_service_v1.get_user_by_email(user_email, session)
         if not user:
@@ -160,7 +156,9 @@ class AuthServiceV1:
 
         return auth_tokens
 
-    async def create_access_token(self, refresh_token: str, session: AsyncSession) -> dict:
+    async def create_access_token(
+        self, refresh_token: str, session: AsyncSession
+    ) -> dict:
         payload: dict = await decode_token(
             refresh_token, settings.REFRESH_TOKEN_SECRET_KEY
         )
@@ -211,4 +209,3 @@ class AuthServiceV1:
 
 
 auth_service_v1 = AuthServiceV1()
-
