@@ -1,5 +1,4 @@
 import json
-import asyncio
 import aiofiles
 from uuid6 import uuid7
 from pathlib import Path
@@ -57,7 +56,3 @@ async def seed_profiles():
         raise ServerError() from e
     finally:
         await session.close()
-
-
-if __name__ == "__main__":
-    asyncio.run(seed_profiles())

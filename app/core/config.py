@@ -45,4 +45,7 @@ class Settings(BaseSettings):
     # session
     SESSION_SECRET_KEY: str
 
+    # admin credentials
+    ADMIN_EMAIL: str
+
 settings: Settings = Settings()

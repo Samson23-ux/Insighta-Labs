@@ -14,7 +14,7 @@ class TokenDataV1(BaseModel):
     id: UUID
 
 
-class AccessTokenCreateV1(BaseModel):
+class AuthTokenRequestV1(BaseModel):
     refresh_token: str = Field(
         ..., description="A valid refresh token that is currently being used"
     )

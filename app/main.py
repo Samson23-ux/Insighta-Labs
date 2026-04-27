@@ -18,10 +18,16 @@ app.add_middleware(
     allow_origins=("*"),
     allow_methods=("*"),
     allow_headers=("*"),
-    allow_credentials=True
+    allow_credentials=True,
 )
 
-app.add_middleware(SessionMiddleware, settings.SESSION_SECRET_KEY)
+app.add_middleware(
+    SessionMiddleware,
+    max_age=900,
+    samesite="lax",
+    secret_key=settings.SESSION_SECRET_KEY,
+    http_only=settings.ENVIRONMENT == "production",
+)
 
 app.include_router(auth_router_v1, prefix=settings.API_PREFIX, tags=["Auth"])
 app.include_router(profile_router_v1, prefix=settings.API_PREFIX, tags=["Profiles"])
@@ -32,7 +38,9 @@ async def lifespan(app: FastAPI):
     app.state.github = AsyncClient(timeout=10.0)
     app.state.agify = AsyncClient(base_url=settings.AGIFY_API_URL, timeout=10.0)
     app.state.genderize = AsyncClient(base_url=settings.GENDERIZE_API_URL, timeout=10.0)
-    app.state.nationalize = AsyncClient(base_url=settings.NATIONALIZE_API_URL, timeout=10.0)
+    app.state.nationalize = AsyncClient(
+        base_url=settings.NATIONALIZE_API_URL, timeout=10.0
+    )
 
     yield
 
