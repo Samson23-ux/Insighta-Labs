@@ -14,6 +14,7 @@ from app.core.exceptions import (
     InvalidTypeError,
     CheckTimeoutError,
     UserNotFoundError,
+    InvalidFormatError,
     AuthorizationError,
     AuthenticationError,
     UnverifiedEmailError,
@@ -189,12 +190,12 @@ app.add_exception_handler(
 
 
 app.add_exception_handler(
-    exc_class_or_status_code=UnverifiedEmailError,
+    exc_class_or_status_code=InvalidFormatError,
     handler=create_exception_handler(
         status_code=400,
         initial_detail={
             "status": "error",
-            "message": "User email not verified",
+            "message": "{format_name} not supported",
         },
     ),
 )

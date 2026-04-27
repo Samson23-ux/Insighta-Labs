@@ -1,6 +1,10 @@
+import csv
+import aiofiles
 import pycountry
+from pathlib import Path
 from uuid import UUID
 from uuid6 import uuid7
+from datetime import datetime , timezone
 from sqlalchemy import Sequence, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import BooleanClauseList
@@ -14,7 +18,6 @@ from app.api.schemas.profiles import ProfileCreateV1, ProfileV1 as ProfileSchema
 from app.core.exceptions import (
     QueryError,
     ServerError,
-    VersionError,
     ResponseError,
     ParameterError,
     MissingNameError,
@@ -91,7 +94,7 @@ class ProfileServiceV1:
             raise InvalidTypeError()
 
         limit: int | bool = await is_integer(limit)
-        if not limit or limit < 10 or limit > 50:
+        if not limit or limit < 1 or limit > 50:
             raise InvalidTypeError()
 
         return (
@@ -401,7 +404,6 @@ class ProfileServiceV1:
     async def get_profiles(
         self,
         session: AsyncSession,
-        version: str | None,
         gender: str | None,
         age_group: str | None,
         country_id: str | None,
@@ -414,9 +416,6 @@ class ProfileServiceV1:
         page: str,
         limit: str,
     ) -> dict:
-        if not version:
-            raise VersionError()
-
         (
             min_age,
             max_age,
@@ -485,11 +484,8 @@ class ProfileServiceV1:
             raise ServerError() from e
 
     async def search_for_profiles(
-        self, q: str, page: str, limit: str, version: str | None, session: AsyncSession
+        self, q: str, page: str, limit: str, session: AsyncSession
     ) -> dict:
-        if not version:
-            raise VersionError()
-
         if not q:
             raise ParameterError()
 
@@ -542,6 +538,51 @@ class ProfileServiceV1:
                 raise ProfilesNotFoundError()
 
             raise ServerError() from e
+
+    async def export_csv(
+        self,
+        session: AsyncSession,
+        gender: str | None,
+        age_group: str | None,
+        country_id: str | None,
+        min_age: str | None,
+        max_age: str | None,
+        min_gender_probability: str | None,
+        min_country_probability: str | None,
+        sort_by: str | None,
+        order: str | None,
+        page: str,
+        limit: str,
+    ) -> Path:
+        data: dict = await self.get_profiles(
+            session,
+            gender,
+            age_group,
+            country_id,
+            min_age,
+            max_age,
+            min_gender_probability,
+            min_country_probability,
+            sort_by,
+            order,
+            page,
+            limit
+        )
+
+        profiles: list[ProfileSchema] = data.get("profiles")
+
+        profile_data: list[dict] = [p.model_dump() for p in profiles]
+        export_filename: str = f"profiles_{datetime.now(timezone.utc).isoformat()}"
+        export_path: Path = Path(__file__ ).parent.parent / "exports" / export_filename
+        profiles_headers = ["id", "name", "gender", "gender_probability", "age", "age_group", "country_id", "country_name", "country_probability", "created"]
+
+        async with aiofiles.open(export_path, "a") as f:
+            writer = csv.DictWriter(f, fieldnames=profiles_headers)
+
+            writer.writeheader()
+            writer.writerows(profile_data)
+
+        return export_path
 
     async def get_profile(
         self, profile_id: UUID, session: AsyncSession
