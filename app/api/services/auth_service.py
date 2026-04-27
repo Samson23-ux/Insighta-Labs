@@ -130,23 +130,37 @@ class AuthServiceV1:
             user_profile["email"] = user_email["email"]
 
         user: User = await user_service_v1.get_user_by_email(user_email, session)
-        if not user:
-            user: User = User(
-                id=uuid7(),
-                github_id=user_profile["id"],
-                username="",
-                email=user_profile["email"],
-                avatar_url="",
-                role="analyst",
-                last_login_at=datetime.now(timezone.utc),
-            )
 
-            try:
+        try:
+            if user:
+                if user.role == "admin":
+                    user_profile["github_id"] = user_profile["id"]
+                    user_profile["username"] = user_profile["login"]
+
+                    user_profile.pop("id")
+                    user_profile.pop("login")
+                    user_profile.pop("created_at")
+
+                    for k, v in user_profile.items():
+                        setattr(user, k, v)
+
+                    await user_service_v1.update_user(user, session)
+            else:
+                user: User = User(
+                    id=uuid7(),
+                    github_id=user_profile["github_id"],
+                    username=user_profile["username"],
+                    email=user_profile["email"],
+                    avatar_url=user_profile["avatar_url"],
+                    role="analyst",
+                    last_login_at=datetime.now(timezone.utc),
+                )
+
                 await user_service_v1.create_user(user, session)
-                await session.commit()
-            except Exception as e:
-                await session.rollback()
-                raise ServerError() from e
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            raise ServerError() from e
 
         token_data: TokenDataV1 = TokenDataV1(id=user.id)
         auth_tokens: dict = await prepare_tokens(user.id, token_data)

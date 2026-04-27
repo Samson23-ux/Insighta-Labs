@@ -131,6 +131,8 @@ async def sign_in(async_client: AsyncClient):
     user_profile: dict = {
         "id": "fakerandomid",
         "email": "fake_user_email",
+        "avatar_url": "fake_avatar_url",
+        "login": "fake_username"
     }
 
     callback_json_patch: AsyncMock = patch(
