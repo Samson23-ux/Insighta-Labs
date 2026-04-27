@@ -27,6 +27,7 @@ from app.api.models.users import User
 from app.dependencies import get_session
 from app.api.models.profiles import Profile
 from app.api.models.auth import RefreshToken
+from app.api.services.user_service import user_service_v1
 from app.api.services.profile_service import profile_service_v1
 
 
@@ -106,6 +107,20 @@ async def seed_database(async_session: AsyncSession):
     await profile_service_v1.create_profiles(profiles, async_session)
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def create_admin(async_session: AsyncSession):
+    admin_user: User = User(
+        id=uuid7(),
+        github_id="fake_github_id",
+        username="fake_admin_username",
+        email="fakeadmin@example.com",
+        avatar_url="fake_avatar_url",
+        role="admin",
+        last_login_at=datetime.now(timezone.utc)
+    )
+    await user_service_v1.create_user(admin_user, async_session)
+
+
 @pytest_asyncio.fixture
 async def sign_in(async_client: AsyncClient):
     sign_in_res: Response = await async_client.get(
@@ -130,9 +145,7 @@ async def sign_in(async_client: AsyncClient):
     fake_github_token: dict = {"access_token": "fakeaccesstoken"}
     user_profile: dict = {
         "id": "fakerandomid",
-        "email": "fake_user_email",
-        "avatar_url": "fake_avatar_url",
-        "login": "fake_username"
+        "email": "fakeadmin@example.com",
     }
 
     callback_json_patch: AsyncMock = patch(
