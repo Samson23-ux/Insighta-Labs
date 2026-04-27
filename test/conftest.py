@@ -145,6 +145,8 @@ async def sign_in(async_client: AsyncClient):
     fake_github_token: dict = {"access_token": "fakeaccesstoken"}
     user_profile: dict = {
         "id": "fakerandomid",
+        "avatar_url": "fake_avatar_url",
+        "login": "fake_username",
         "email": "fakeadmin@example.com",
     }
 
