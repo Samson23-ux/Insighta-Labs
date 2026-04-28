@@ -20,7 +20,7 @@ class AuthRepoV1:
         return token
 
     async def add_token_to_db(self, refresh_token: RefreshToken, session: AsyncSession):
-        await session.add(refresh_token)
+        session.add(refresh_token)
         await session.flush()
         await session.refresh(refresh_token)
 

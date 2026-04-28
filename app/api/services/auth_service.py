@@ -72,21 +72,23 @@ class AuthServiceV1:
         return json_res
 
     async def sign_up_with_github(
-        self, request: Request, code: str, url_state: str, session: AsyncSession
-    ) -> dict:
-        client_data: dict = request.session.get("client_data")
+        self,
+        url: str,
+        code: str,
+        url_state: str,
+        saved_state: str,
+        code_verifier: str,
+        client: AsyncClient,
+        session: AsyncSession,
+    ) -> tuple:
 
-        state: str = client_data.get("state")
-        code_verifier: str = client_data.get("code_challenge")
-
-        if state != url_state:
-            raise AuthorizationError()
+        if saved_state and url_state:
+            if saved_state != url_state:
+                raise AuthorizationError()
 
         curr_retries: int = 0
         total_retries: int = 5
         status: str = "failure"
-
-        github_client: AsyncClient = request.app.state.github
 
         while curr_retries < total_retries and status == "failure":
             try:
@@ -94,11 +96,11 @@ class AuthServiceV1:
                     "client_id": settings.GITHUB_CLIENT_ID,
                     "client_secret": settings.GITHUB_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": request.url,
+                    "redirect_uri": url,
                     "code_verifier": code_verifier,
                 }
                 header: dict = {"Accept": "application/json"}
-                res: Response = await github_client.post(
+                res: Response = await client.post(
                     settings.GITHUB_ACCESS_TOKEN_URL, data=data, headers=header
                 )
 
@@ -116,12 +118,12 @@ class AuthServiceV1:
 
         access_token: str = json_res["access_token"]
 
-        user_profile: dict = await self.get_user_profile(github_client, access_token)
+        user_profile: dict = await self.get_user_profile(client, access_token)
 
-        if "email" not in user_profile:
-            user_emails: list[dict] = await self.get_user_emails(
-                github_client, access_token
-            )
+        user_email: str = user_profile.get("email")
+
+        if not user_email:
+            user_emails: list[dict] = await self.get_user_emails(client, access_token)
             user_email: dict = next(e for e in user_emails if e["primary"])
 
             if not user_email["verified"]:
@@ -149,7 +151,7 @@ class AuthServiceV1:
                 user: User = User(
                     id=uuid7(),
                     github_id=user_profile["github_id"],
-                    username=user_profile["username"],
+                    username=user_profile["login"],
                     email=user_profile["email"],
                     avatar_url=user_profile["avatar_url"],
                     role="analyst",
@@ -168,7 +170,7 @@ class AuthServiceV1:
         refresh_token_db = auth_tokens.pop("refresh_token_db")
         await auth_repo_v1.add_token_to_db(refresh_token_db, session)
 
-        return auth_tokens
+        return auth_tokens, user_profile
 
     async def create_access_token(
         self, refresh_token: str, session: AsyncSession

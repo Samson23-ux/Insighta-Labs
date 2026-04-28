@@ -22,7 +22,7 @@ class UserRepoV1:
         return user
     
     async def add_user_to_db(self, user: User, session: AsyncSession):
-        await session.add(user)
+        session.add(user)
         await session.flush()
         await session.refresh(user)
 

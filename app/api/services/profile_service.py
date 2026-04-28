@@ -1,9 +1,9 @@
 import csv
 import aiofiles
 import pycountry
-from pathlib import Path
 from uuid import UUID
 from uuid6 import uuid7
+from pathlib import Path
 from datetime import datetime , timezone
 from sqlalchemy import Sequence, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -571,7 +571,15 @@ class ProfileServiceV1:
 
         profiles: list[ProfileSchema] = data.get("profiles")
 
-        profile_data: list[dict] = [p.model_dump() for p in profiles]
+        profile_dict: list[dict] = [p.model_dump() for p in profiles]
+
+        profile_data: list[list[str]] = []
+        for profile in profile_dict:
+            rows = []
+            for _, v in profile.items():
+                rows.append(v)
+            profile_data.append(rows)
+
         export_filename: str = f"profiles_{datetime.now(timezone.utc).isoformat()}"
         export_path: Path = Path(__file__ ).parent.parent / "exports" / export_filename
         profiles_headers = ["id", "name", "gender", "gender_probability", "age", "age_group", "country_id", "country_name", "country_probability", "created"]

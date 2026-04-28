@@ -15,7 +15,7 @@ async def test_create_profile(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
     json_res = res.json()
@@ -35,7 +35,7 @@ async def test_profile_exists(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 
@@ -57,7 +57,7 @@ async def test_wrong_name_type(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 
@@ -75,7 +75,7 @@ async def test_invalid_name(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 
@@ -93,7 +93,7 @@ async def test_get_profiles(
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
     json_res = res.json()
@@ -109,7 +109,7 @@ async def test_get_profiles_not_found(async_client: AsyncClient, sign_in: Respon
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
     assert res.status_code == 404
@@ -123,7 +123,7 @@ async def test_export_csv(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
     json_res = res.json()
@@ -143,7 +143,7 @@ async def test_get_profile(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 
@@ -177,7 +177,7 @@ async def test_get_profile_not_found(async_client: AsyncClient, sign_in: Respons
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 
@@ -196,7 +196,7 @@ async def test_search_profile(
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
     json_res = res.json()
@@ -217,7 +217,7 @@ async def test_invalid_query(
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 
@@ -235,7 +235,7 @@ async def test_delete_profile(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 

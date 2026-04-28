@@ -8,7 +8,7 @@ from uuid6 import uuid7
 from pathlib import Path
 from sqlalchemy.pool import NullPool
 from datetime import datetime, timezone
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, Mock
 from httpx import AsyncClient, ASGITransport, Response
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -31,7 +31,7 @@ from app.api.services.user_service import user_service_v1
 from app.api.services.profile_service import profile_service_v1
 
 
-BASE_PATH: str = app.api.services.auth_service
+BASE_PATH: str = "app.api.services.auth_service"
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -127,7 +127,7 @@ async def sign_in(async_client: AsyncClient):
         "/auth/github",
         follow_redirects=False,
         headers={
-            "X-API-Version": 1,
+            "X-API-Version": "1",
             "env": "testing",
         },
     )
@@ -138,7 +138,7 @@ async def sign_in(async_client: AsyncClient):
 
     signer = itsdangerous.TimestampSigner(settings.SESSION_SECRET_KEY)
     data = signer.unsign(session_cookie)
-    client_data: dict = json.loads(base64.b64decode(data))
+    client_data: dict = json.loads(base64.b64decode(data))["client_data"]
 
     state: str = client_data.get("state")
 
@@ -147,32 +147,33 @@ async def sign_in(async_client: AsyncClient):
         "id": "fakerandomid",
         "avatar_url": "fake_avatar_url",
         "login": "fake_username",
-        "email": "fakeadmin@example.com",
+        "email": "fakeuser@example.com",
+        "github_id": "fake_github_id_1"
     }
 
-    callback_json_patch: AsyncMock = patch(
-        f"{BASE_PATH}.res.json", new_callable=AsyncMock
-    ).start()
+    mock_client = AsyncMock()
+
+    mock_response = Mock()
+    mock_response.json.return_value = fake_github_token
+
+    mock_client.post.return_value = mock_response
+
+    app.state.github = mock_client
+
     profile_patch: AsyncMock = patch(
-        f"{BASE_PATH}.get_user_profile", new_callable=AsyncMock
-    ).start()
-    callback_patch: AsyncMock = patch(
-        f"{BASE_PATH}.github_client.post", new_callable=AsyncMock
+        f"{BASE_PATH}.auth_service_v1.get_user_profile", new_callable=AsyncMock
     ).start()
 
     profile_patch.return_value = user_profile
-    callback_json_patch.return_value = fake_github_token
 
     callback_res: Response = await async_client.get(
         f"/auth/github/callback?code=fakegithubcode&state={state}",
         headers={
-            "X-API-Version": 1,
+            "X-API-Version": "1",
             "env": "testing",
         },
     )
 
-    profile_patch.stop()
-    callback_patch.stop()
-    callback_json_patch.stop()
+    await profile_patch.stop()
 
     return callback_res

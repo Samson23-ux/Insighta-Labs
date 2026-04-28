@@ -32,6 +32,10 @@ class TokenResponseV1(BaseModel):
     refresh_token: str
 
 
+class LoginResponseV1(TokenResponseV1):
+    user_profile: dict
+
+
 class LogoutResponseV1(BaseModel):
     status: str = "success"
     message: str

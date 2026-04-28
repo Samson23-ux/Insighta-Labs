@@ -1,6 +1,4 @@
 import pytest
-from uuid import UUID
-from uuid6 import uuid7
 from httpx import AsyncClient, Response
 
 
@@ -19,7 +17,7 @@ async def test_create_access_token(async_client: AsyncClient, sign_in: Response)
         "/auth/refresh",
         json={"refresh_token": refresh_token},
         headers={
-            "X-API-Version": 1,
+            "X-API-Version": "1",
             "env": "testing",
         },
     )
@@ -40,7 +38,7 @@ async def test_logout(async_client: AsyncClient, sign_in: Response):
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
-            "X-API-Version": 1,
+            "X-API-Version": "1",
         },
     )
 

@@ -1,7 +1,3 @@
-import string
-from secrets import choice
-
-
 async def is_number(val: str) -> bool:
     """checks if strings are integers or float"""
     try:
@@ -25,10 +21,3 @@ async def is_float(val: str) -> float | bool:
         return val
     except ValueError:
         return False
-    
-
-async def get_random_string() -> str:
-    state: str = ""
-    seq = string.ascii_letters + string.digits + string.punctuation
-    state: str = "".join(choice(seq) for _ in range(43))
-    return state

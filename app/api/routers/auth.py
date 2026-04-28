@@ -1,21 +1,22 @@
+from uuid import uuid4
 from typing import Annotated
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Request, Depends, Response
+from fastapi import APIRouter, Request, Depends, Response, Query
 
 
 from app.core.config import settings
 from app.api.models.users import User
-from app.utils import get_random_string
 from app.core.security import hash_code_challenge
 from app.api.services.auth_service import auth_service_v1
 from app.dependencies import get_session, get_current_active_user
-from app.core.exceptions import VersionError, InvalidParameterError
+from app.core.exceptions import VersionError, InvalidParameterError, AuthorizationError
 from app.api.schemas.auth import (
     APIClientV1,
+    LoginResponseV1,
     TokenResponseV1,
-    AuthTokenRequestV1,
     LogoutResponseV1,
+    AuthTokenRequestV1,
 )
 
 
@@ -30,63 +31,73 @@ auth_router_v1 = APIRouter()
 )
 async def sign_in(
     request: Request,
-    api_client: APIClientV1,
+    api_client: Annotated[
+        str, Query(description="Client attribute must be set to web for web clients")
+    ] = None,
 ):
     version: str | None = request.headers.get("X-API-Version")
 
     if not version:
         raise VersionError()
 
-    state: str = await get_random_string()
-    code_challenge: str = await get_random_string()
-    hashed_code_challenge: str = hash_code_challenge(code_challenge)
+    state: str = str(uuid4())
+    code_challenge: str = str(uuid4())
+    hashed_code_challenge: str = await hash_code_challenge(code_challenge)
 
     client_data: dict = {"state": state, "code_challenge": code_challenge}
 
-    if api_client.client:
-        if api_client.client.lower() != "web":
+    if api_client:
+        if api_client.lower() != "web":
             raise InvalidParameterError(param="client")
         else:
-            client_data["client"] = api_client.client.lower()
+            client_data["client"] = api_client.lower()
 
     request.session["client_data"] = client_data
 
-    return RedirectResponse(
-        f"""
-            {settings.GITHUB_AUTHORIZE_URL}
-            ?client_id={settings.GITHUB_CLIENT_ID}
-            &redirect_uri={settings.GITHUB_CALLBACK_URL}
-            &scope=user&state={state}
-            &code_challenge={hashed_code_challenge}
-            &code_challenge_method=S256
-        """,
-        302,
+    url = (
+        f"{settings.GITHUB_AUTHORIZE_URL}"
+        f"?client_id={settings.GITHUB_CLIENT_ID}"
+        f"&redirect_uri={settings.GITHUB_CALLBACK_URL}"
+        f"&scope=user&state={state}"
+        f"&code_challenge={hashed_code_challenge}"
+        f"&code_challenge_method=S256"
     )
+    return RedirectResponse(url, 302)
 
 
 @auth_router_v1.get(
     "/auth/github/callback",
     status_code=200,
-    response_model=TokenResponseV1,
+    response_model=LoginResponseV1,
     description="Github callback url",
 )
 async def github_callback(
-    code: str,
-    state: str,
     request: Request,
     response: Response,
     session: Annotated[AsyncSession, Depends(get_session)],
+    error: str = None,
+    state: str = None,
+    code: str = None,
+    code_verifier: str = None,
 ):
     version: str | None = request.headers.get("X-API-Version")
 
     if not version:
         raise VersionError()
 
-    client_data: dict = request.session.get("client_data")
-    client: str = client_data.get("client")
+    if error:
+        raise AuthorizationError()
 
-    auth_tokens: dict = await auth_service_v1.sign_up_with_github(
-        request, code, state, session
+    github_client = request.app.state.github
+
+    client_data: dict = request.session.get("client_data")
+
+    client: str = client_data.get("client")
+    saved_state: str = client_data.get("state")
+    code_verifier: str = client_data.get("code_challenge")
+
+    auth_tokens, user_profile = await auth_service_v1.sign_up_with_github(
+        request.url, code, saved_state, state, code_verifier, github_client, session
     )
 
     if client:
@@ -107,10 +118,10 @@ async def github_callback(
             samesite="lax",
             max_age=300,
         )
-    return TokenResponseV1(**auth_tokens)
+    return LoginResponseV1(**auth_tokens, user_profile=user_profile)
 
 
-@auth_service_v1.post(
+@auth_router_v1.post(
     "/auth/refresh",
     status_code=201,
     response_model=TokenResponseV1,
@@ -165,7 +176,7 @@ async def create_access_token(
     return TokenResponseV1(**auth_tokens)
 
 
-@auth_service_v1.post(
+@auth_router_v1.post(
     "/auth/logout",
     status_code=201,
     response_model=LogoutResponseV1,

@@ -199,3 +199,15 @@ app.add_exception_handler(
         },
     ),
 )
+
+
+app.add_exception_handler(
+    exc_class_or_status_code=UnverifiedEmailError,
+    handler=create_exception_handler(
+        status_code=400,
+        initial_detail={
+            "status": "error",
+            "message": "Email not verified",
+        },
+    ),
+)
