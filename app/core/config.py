@@ -53,4 +53,7 @@ class Settings(BaseSettings):
     GITHUB_CLI_CLIENT_SECRET: str
     REDIRECT_CLI_URI: str
 
+    # frontend
+    FRONTEND_URL: str
+
 settings: Settings = Settings()

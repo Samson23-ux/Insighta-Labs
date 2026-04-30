@@ -135,7 +135,9 @@ async def github_callback(
             max_age=300,
         )
 
-    return LoginResponseV1(**auth_tokens, user_profile=user_profile)
+        return RedirectResponse(f"{settings.FRONTEND_URL}/#/dashboard")
+    else:
+        return LoginResponseV1(**auth_tokens, user_profile=user_profile)
 
 
 @auth_router_v1.get(

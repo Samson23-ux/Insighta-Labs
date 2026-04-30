@@ -55,6 +55,7 @@ async def get_current_user(
             token: str = creds.credentials
     else:
         token: str = request.cookies.get("access_token")
+        print(f"TOKEN ==== {token}")
 
     if not token:
         raise AuthenticationError()
