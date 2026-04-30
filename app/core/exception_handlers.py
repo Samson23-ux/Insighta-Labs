@@ -19,6 +19,7 @@ from app.core.exceptions import (
     UnverifiedEmailError,
     ProfileNotFoundError,
     ProfilesNotFoundError,
+    InvalidParameterError,
     create_exception_handler
 )
 
@@ -49,6 +50,18 @@ app.add_exception_handler(
         initial_detail={
             "status": "error",
             "message": "{param} parameter not passed",
+        },
+        status_code=400,
+    ),
+)
+
+
+app.add_exception_handler(
+    InvalidParameterError,
+    create_exception_handler(
+        initial_detail={
+            "status": "error",
+            "message": "{param} parameter value not recognized",
         },
         status_code=400,
     ),

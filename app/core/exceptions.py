@@ -42,6 +42,13 @@ class ParameterError(AppException):
         self.param = param
 
 
+class InvalidParameterError(AppException):
+    """Invalid parameter passed"""
+
+    def __init__(self, param: str):
+        self.param = param
+
+
 class ServerError(AppException):
     """Internal server error"""
 

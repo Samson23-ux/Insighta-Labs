@@ -7,11 +7,11 @@ from fastapi import APIRouter, Request, Depends, Response
 from app.core.config import settings
 from app.api.models.users import User
 from app.utils import get_random_string
-from app.core.exceptions import VersionError
 from app.core.security import hash_code_challenge
 from app.api.services.auth_service import auth_service_v1
 from app.dependencies import get_session, get_current_active_user
-from app.api.schemas.auth import TokenResponseV1, AccessTokenCreateV1, LogoutResponseV1
+from app.core.exceptions import VersionError, InvalidParameterError
+from app.api.schemas.auth import APIClientV1, TokenResponseV1, AccessTokenCreateV1, LogoutResponseV1
 
 
 auth_router_v1 = APIRouter()
@@ -23,7 +23,10 @@ auth_router_v1 = APIRouter()
     response_class=RedirectResponse,
     description="Sign up with github",
 )
-async def sign_in(request: Request):
+async def sign_in(
+    request: Request,
+    api_client: APIClientV1,
+):
     version: str | None = request.headers.get("X-API-Version")
 
     if not version:
@@ -33,8 +36,15 @@ async def sign_in(request: Request):
     code_challenge: str = await get_random_string()
     hashed_code_challenge: str = hash_code_challenge(code_challenge)
 
-    request.session["state"] = state
-    request.session["code_challenge"] = code_challenge
+    client_data: dict = {"state": state, "code_challenge": code_challenge}
+
+    if api_client.client:
+        if api_client.client.lower() != "web":
+            raise InvalidParameterError(param="client")
+        else:
+            client_data["client"] = api_client.client.lower()
+
+    request.session["client_data"] = client_data
 
     return RedirectResponse(
         f"""
@@ -56,22 +66,38 @@ async def sign_in(request: Request):
     description="Github callback url",
 )
 async def github_callback(
-    request: Request, response: Response, session: Annotated[AsyncSession, Depends(get_session)]
+    request: Request,
+    response: Response,
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     version: str | None = request.headers.get("X-API-Version")
 
     if not version:
         raise VersionError()
 
+    client_data: dict = request.session.get("client_data")
+    client: str = client_data.get("client")
+
     auth_tokens: dict = await auth_service_v1.sign_up_with_github(request, session)
 
-    response.set_cookie(
-        key="refresh_token",
-        value=auth_tokens["refresh_token"],
-        httponly=True,
-        secure=settings.ENVIRONMENT == "production",
-        samesite="lax"
-    )
+    if client:
+        response.set_cookie(
+            key="access_token",
+            value=auth_tokens["access_token"],
+            httponly=True,
+            secure=settings.ENVIRONMENT == "production",
+            samesite="lax",
+            max_age=180
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=auth_tokens["refresh_token"],
+            httponly=True,
+            secure=settings.ENVIRONMENT == "production",
+            samesite="lax",
+            max_age=300
+        )
     return TokenResponseV1(**auth_tokens)
 
 
@@ -84,23 +110,44 @@ async def github_callback(
 async def create_access_token(
     request: Request,
     response: Response,
+    api_client: APIClientV1,
     refresh_token: AccessTokenCreateV1,
-    session: Annotated[AsyncSession, Depends(get_session)]
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
+    web_client: bool = False
     version: str | None = request.headers.get("X-API-Version")
 
     if not version:
         raise VersionError()
 
-    auth_tokens: dict = await auth_service_v1.create_access_token(refresh_token, session)
+    if api_client.client:
+        if api_client.client.lower() != "web":
+            raise InvalidParameterError(param="client")
+        else:
+            web_client: bool = True
 
-    response.set_cookie(
-        key="refresh_token",
-        value=auth_tokens["refresh_token"],
-        httponly=True,
-        secure=settings.ENVIRONMENT == "production",
-        samesite="lax"
+    auth_tokens: dict = await auth_service_v1.create_access_token(
+        refresh_token, session
     )
+
+    if web_client:
+        response.set_cookie(
+            key="access_token",
+            value=auth_tokens["access_token"],
+            httponly=True,
+            secure=settings.ENVIRONMENT == "production",
+            samesite="lax",
+            max_age=180
+        )
+
+        response.set_cookie(
+            key="refresh_token",
+            value=auth_tokens["refresh_token"],
+            httponly=True,
+            secure=settings.ENVIRONMENT == "production",
+            samesite="lax",
+            max_age=300
+        )
     return TokenResponseV1(**auth_tokens)
 
 
@@ -113,7 +160,7 @@ async def create_access_token(
 async def log_user_out(
     request: Request,
     curr_user: Annotated[User, Depends(get_current_active_user)],
-    session: Annotated[AsyncSession, Depends(get_session)]
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     refresh_token: str = request.cookies.get("refresh_token")
     version: str | None = request.headers.get("X-API-Version")

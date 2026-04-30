@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import Request, Security, Depends
+from typing import Annotated
+from fastapi import Request, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -12,7 +13,7 @@ from app.api.services.user_service import user_service_v1
 from app.core.exceptions import AuthenticationError, AuthorizationError
 
 
-bearer_scheme = HTTPBearer()
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_session():
@@ -32,10 +33,17 @@ async def get_client(request: Request):
 
 
 async def get_current_user(
-    creds: HTTPAuthorizationCredentials = Security(bearer_scheme),
-    db: AsyncSession = Depends(get_session),
+    request: Request,
+    creds: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
+    session: AsyncSession = Depends(get_session),
 ):
-    token: str = creds.credentials
+    token = None
+
+    if creds:
+        token: str = creds.credentials
+    else:
+        token: str = request.cookies.get("access_token")
+
     key: str = settings.ACCESS_TOKEN_SECRET_KEY
     payload: dict = await decode_token(token, key)
 
@@ -43,8 +51,7 @@ async def get_current_user(
         raise AuthenticationError()
 
     user_id: UUID = payload.get("sub")
-
-    user: User = await user_service_v1.get_user_by_id(user_id, db)
+    user: User = await user_service_v1.get_user_by_id(user_id, session)
 
     return user
 

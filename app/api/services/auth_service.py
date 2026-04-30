@@ -74,8 +74,10 @@ class AuthServiceV1:
     async def sign_up_with_github(
         self, request: Request, session: AsyncSession
     ) -> dict:
-        state: str = request.session.get("state")
-        code_verifier: str = request.session("code_challenge")
+        client_data: dict = request.session.get("client_data")
+
+        state: str = client_data.get("state")
+        code_verifier: str = client_data.get("code_challenge")
 
         code: str = request.query_params.get("code")
         url_state: str = request.query_params.get("state")
