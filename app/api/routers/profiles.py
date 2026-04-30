@@ -1,10 +1,14 @@
 from uuid import UUID
+from pathlib import Path
 from typing import Annotated
+from datetime import datetime, timezone
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, Query, Request
 
 
 from app.api.models.users import User
+from app.core.exceptions import VersionError
 from app.api.services.profile_service import profile_service_v1
 from app.dependencies import get_session, get_client, required_roles
 from app.api.schemas.profiles import (
@@ -64,9 +68,12 @@ async def get_all_profiles(
     ] = "10",
 ):
     version: str | None = request.headers.get("X-API-Version")
+
+    if not version:
+        raise VersionError()
+
     data: dict = await profile_service_v1.get_profiles(
         session,
-        version,
         gender,
         age_group,
         country_id,
@@ -104,11 +111,13 @@ async def search_for_profiles(
     ] = "10",
 ):
     version: str | None = request.headers.get("X-API-Version")
+    if not version:
+        raise VersionError()
+
     data: dict = await profile_service_v1.search_for_profiles(
         q,
         page,
         limit,
-        version,
         session,
     )
 
@@ -120,16 +129,97 @@ async def search_for_profiles(
 
 
 @profile_router_v1.get(
+    "/profiles/export",
+    status_code=200,
+    response_class=FileResponse,
+    description="Get profiles as a csv file",
+)
+async def export_csv(
+    request: Request,
+    format: Annotated[
+        str, Query(description="Export format. Only csv format is supported")
+    ],
+    _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
+    session: Annotated[AsyncSession, Depends(get_session)],
+    gender: Annotated[
+        str, Query(description="Filter profiles by gender (male, female)")
+    ] = None,
+    age_group: Annotated[
+        str,
+        Query(
+            description="Filter profiles by age_group (child, teenager, adult, senior)"
+        ),
+    ] = None,
+    country_id: Annotated[
+        str, Query(description="Filter profiles by country code (2-letter ISO)")
+    ] = None,
+    min_age: Annotated[
+        str, Query(description="Set a minimum age to view profiles from")
+    ] = None,
+    max_age: Annotated[
+        str, Query(description="Set a maximum age to view profiles to")
+    ] = None,
+    min_gender_probability: Annotated[
+        str, Query(description="Set a minimum age probability to view profiles from")
+    ] = None,
+    min_country_probability: Annotated[
+        str,
+        Query(description="Set a minimum country probability to view profiles from"),
+    ] = None,
+    sort_by: Annotated[
+        str, Query(description="Sort by any of (age, created_at, gender_probability)")
+    ] = None,
+    order: Annotated[str, Query(description="Order in asc or desc")] = None,
+    page: Annotated[str, Query(description="Select what page to view")] = "1",
+    limit: Annotated[
+        str, Query(description="Set the total profiles to return per page")
+    ] = "10",
+):
+    version: str | None = request.headers.get("X-API-Version")
+
+    if not version:
+        raise VersionError()
+
+    export_path: Path = await profile_service_v1.export_csv(
+        session,
+        gender,
+        age_group,
+        country_id,
+        min_age,
+        max_age,
+        min_gender_probability,
+        min_country_probability,
+        sort_by,
+        order,
+        page,
+        limit,
+    )
+
+    filename: str = f"profiles_{datetime.now(timezone.utc).isoformat()}"
+    return FileResponse(
+        path=export_path,
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@profile_router_v1.get(
     "/profiles/{profile_id}",
     status_code=200,
     response_model=ProfileResponseV1,
     description="Get a profile",
 )
 async def get_profile_by_id(
+    request: Request,
     profile_id: UUID,
     _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
-    session: Annotated[AsyncSession, Depends(get_session)]
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
+    version: str | None = request.headers.get("X-API-Version")
+
+    if not version:
+        raise VersionError()
+
     profile: ProfileV1 = await profile_service_v1.get_profile(profile_id, session)
     return ProfileResponseV1(data=profile)
 
@@ -141,11 +231,17 @@ async def get_profile_by_id(
     description="Create a profile",
 )
 async def create_profile(
+    request: Request,
     profile_create: ProfileCreateV1,
     _: Annotated[User, Depends(required_roles(["admin"]))],
     client: Annotated[tuple, Depends(get_client)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
+    version: str | None = request.headers.get("X-API-Version")
+
+    if not version:
+        raise VersionError()
+
     profile_data: dict = await profile_service_v1.create_profile(
         profile_create, client, session
     )
@@ -163,8 +259,14 @@ async def create_profile(
     "/profiles/{profile_id}", status_code=204, description="Delete a profile"
 )
 async def delete_profile(
+    request: Request,
     profile_id: UUID,
     _: Annotated[User, Depends(required_roles(["admin"]))],
-    session: Annotated[AsyncSession, Depends(get_session)]
+    session: Annotated[AsyncSession, Depends(get_session)],
 ):
+    version: str | None = request.headers.get("X-API-Version")
+
+    if not version:
+        raise VersionError()
+
     await profile_service_v1.delete_profile(profile_id, session)

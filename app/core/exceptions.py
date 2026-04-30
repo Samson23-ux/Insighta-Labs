@@ -107,6 +107,14 @@ class UnverifiedEmailError(AppException):
     pass
 
 
+class InvalidFormatError(AppException):
+    """Received an unsupported format"""
+    def __init__(self, format_name: str):
+        self.format_name = format_name
+
+    pass
+
+
 def create_exception_handler(
     initial_detail: dict, status_code: int
 ) -> callable[[Request, AppException], JSONResponse]:

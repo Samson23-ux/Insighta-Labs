@@ -12,7 +12,7 @@ class UserServiceV1:
         user: User | None = await user_repo_v1.get_user_by_id(user_id, session)
 
         if not user:
-            raise UserNotFoundError()
+            raise UserNotFoundError(user_id=user_id)
 
         return user
 
