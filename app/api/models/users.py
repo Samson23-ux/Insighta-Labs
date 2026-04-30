@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy import (
     UUID,
+    Boolean,
     VARCHAR,
     DateTime,
     PrimaryKeyConstraint,
@@ -18,10 +19,10 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID)
     github_id: Mapped[str] = mapped_column(VARCHAR, unique=True)
     username: Mapped[str] = mapped_column(VARCHAR)
-    email: Mapped[str] = mapped_column(VARCHAR)
+    email: Mapped[str] = mapped_column(VARCHAR, unique=True)
     avatar_url: Mapped[str] = mapped_column(VARCHAR)
     role: Mapped[str] = mapped_column(VARCHAR)
-    is_active: Mapped[str] = mapped_column(VARCHAR(2))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_login_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)

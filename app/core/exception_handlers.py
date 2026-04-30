@@ -13,6 +13,10 @@ from app.core.exceptions import (
     MissingNameError,
     InvalidTypeError,
     CheckTimeoutError,
+    UserNotFoundError,
+    AuthorizationError,
+    AuthenticationError,
+    UnverifiedEmailError,
     ProfileNotFoundError,
     ProfilesNotFoundError,
     create_exception_handler
@@ -131,5 +135,53 @@ app.add_exception_handler(
             "message": "Profile not found with id {profile_id}",
         },
         status_code=404,
+    ),
+)
+
+
+app.add_exception_handler(
+    exc_class_or_status_code=AuthenticationError,
+    handler=create_exception_handler(
+        status_code=401,
+        initial_detail={
+            "status": "error",
+            "message": "User is not authenticated",
+        },
+    ),
+)
+
+
+app.add_exception_handler(
+    exc_class_or_status_code=AuthorizationError,
+    handler=create_exception_handler(
+        status_code=403,
+        initial_detail={
+            "status": "error",
+            "message": "User is not authorized to make the requested action",
+        },
+    ),
+)
+
+
+app.add_exception_handler(
+    exc_class_or_status_code=UserNotFoundError,
+    handler=create_exception_handler(
+        status_code=404,
+        initial_detail={
+            "status": "error",
+            "message": "User with id not found with id {user_id}",
+        },
+    ),
+)
+
+
+app.add_exception_handler(
+    exc_class_or_status_code=UnverifiedEmailError,
+    handler=create_exception_handler(
+        status_code=400,
+        initial_detail={
+            "status": "error",
+            "message": "User email not verified",
+        },
     ),
 )

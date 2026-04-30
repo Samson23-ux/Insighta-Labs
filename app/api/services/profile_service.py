@@ -319,7 +319,7 @@ class ProfileServiceV1:
                 raise QueryError()
 
         return queries
-    
+
     async def agify_request(self, name: str, client: AsyncClient):
         curr_retries: int = 0
         total_retries: int = 5
@@ -342,7 +342,7 @@ class ProfileServiceV1:
             raise ResponseError(external_api="Agify")
 
         return json_res
-    
+
     async def genderize_request(self, name: str, client: AsyncClient):
         curr_retries: int = 0
         total_retries: int = 5
@@ -366,7 +366,7 @@ class ProfileServiceV1:
             raise ResponseError(external_api="Genderize")
 
         return json_res
-    
+
     async def nationalize_request(self, name: str, client: AsyncClient):
         curr_retries: int = 0
         total_retries: int = 5
@@ -413,7 +413,7 @@ class ProfileServiceV1:
         order: str | None,
         page: str,
         limit: str,
-    ) -> list[ProfileSchema]:
+    ) -> dict:
         if not version:
             raise VersionError()
 
@@ -459,10 +459,25 @@ class ProfileServiceV1:
             if not profiles:
                 raise ProfilesNotFoundError()
 
+            data: dict = {}
             profiles_out: list[ProfileSchema] = []
+
             for profile in profiles:
                 profiles_out.append(ProfileSchema.model_validate(profile))
-            return profiles_out
+
+            next_page: str | None = f"/api/profiles?page={str(page+1)}&limit={str(limit)}" if page < 203 else None
+            prev_page: str | None = f"/api/profiles?page={str(page-1)}&limit={str(limit)}" if page > 1 else None
+
+            links: dict = {
+                "self": f"/api/profiles?page={str(page)}&limit={str(limit)}",
+                "next": next_page,
+                "prev": prev_page
+            }
+
+            data["links"] = links
+            data["profiles"] = profiles_out
+
+            return data
         except Exception as e:
             if isinstance(e, ProfilesNotFoundError):
                 raise ProfilesNotFoundError()
@@ -471,7 +486,7 @@ class ProfileServiceV1:
 
     async def search_for_profiles(
         self, q: str, page: str, limit: str, version: str | None, session: AsyncSession
-    ):
+    ) -> dict:
         if not version:
             raise VersionError()
 
@@ -503,17 +518,34 @@ class ProfileServiceV1:
             if not profiles:
                 raise ProfilesNotFoundError()
 
+            data: dict = {}
             profiles_out: list[ProfileSchema] = []
+
             for profile in profiles:
                 profiles_out.append(ProfileSchema.model_validate(profile))
-            return profiles_out
+                
+            next_page: str | None = f"/api/profiles?page={str(page+1)}&limit={str(limit)}" if page < 203 else None
+            prev_page: str | None = f"/api/profiles?page={str(page-1)}&limit={str(limit)}" if page > 1 else None
+
+            links: dict = {
+                "self": f"/api/profiles?page={str(page)}&limit={str(limit)}",
+                "next": next_page,
+                "prev": prev_page
+            }
+
+            data["links"] = links
+            data["profiles"] = profiles_out
+
+            return data
         except Exception as e:
             if isinstance(e, ProfilesNotFoundError):
                 raise ProfilesNotFoundError()
 
             raise ServerError() from e
-        
-    async def get_profile(self, profile_id: UUID, session: AsyncSession) -> ProfileSchema:
+
+    async def get_profile(
+        self, profile_id: UUID, session: AsyncSession
+    ) -> ProfileSchema:
         try:
             profile: Profile | None = await profile_repo_v1.get_profile(
                 profile_id, session
@@ -537,7 +569,7 @@ class ProfileServiceV1:
 
         if not name:
             raise MissingNameError()
-        
+
         if await is_number(name):
             raise InvalidTypeError()
 
@@ -546,9 +578,11 @@ class ProfileServiceV1:
         )
 
         if existing_profile:
-            existing_profile_out: ProfileSchema = ProfileSchema.model_validate(existing_profile)
+            existing_profile_out: ProfileSchema = ProfileSchema.model_validate(
+                existing_profile
+            )
             return {"data": existing_profile_out, "exists": True}
-        
+
         agify_client, genderize_client, nationalize_client = client
 
         agify_res: dict = await self.agify_request(name, agify_client)
@@ -602,7 +636,7 @@ class ProfileServiceV1:
         except Exception as e:
             await session.rollback()
             raise ServerError() from e
-        
+
     async def delete_profile(self, profile_id: UUID, session: AsyncSession):
         profile: Profile | None = await profile_repo_v1.get_profile(profile_id, session)
 
