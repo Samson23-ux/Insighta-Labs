@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.api.models.profiles import Profile
 from app.core.exceptions import ServerError
 from app.database.session import async_engine
-from app.api.services.profile_service import profile_service
+from app.api.services.profile_service import profile_service_v1
 
 
 async_session = async_sessionmaker(

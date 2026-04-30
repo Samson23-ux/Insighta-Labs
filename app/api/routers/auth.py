@@ -11,7 +11,12 @@ from app.core.security import hash_code_challenge
 from app.api.services.auth_service import auth_service_v1
 from app.dependencies import get_session, get_current_active_user
 from app.core.exceptions import VersionError, InvalidParameterError
-from app.api.schemas.auth import APIClientV1, TokenResponseV1, AccessTokenCreateV1, LogoutResponseV1
+from app.api.schemas.auth import (
+    APIClientV1,
+    TokenResponseV1,
+    AuthTokenRequestV1,
+    LogoutResponseV1,
+)
 
 
 auth_router_v1 = APIRouter()
@@ -66,6 +71,8 @@ async def sign_in(
     description="Github callback url",
 )
 async def github_callback(
+    code: str,
+    state: str,
     request: Request,
     response: Response,
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -78,7 +85,9 @@ async def github_callback(
     client_data: dict = request.session.get("client_data")
     client: str = client_data.get("client")
 
-    auth_tokens: dict = await auth_service_v1.sign_up_with_github(request, session)
+    auth_tokens: dict = await auth_service_v1.sign_up_with_github(
+        request, code, state, session
+    )
 
     if client:
         response.set_cookie(
@@ -87,7 +96,7 @@ async def github_callback(
             httponly=True,
             secure=settings.ENVIRONMENT == "production",
             samesite="lax",
-            max_age=180
+            max_age=180,
         )
 
         response.set_cookie(
@@ -96,7 +105,7 @@ async def github_callback(
             httponly=True,
             secure=settings.ENVIRONMENT == "production",
             samesite="lax",
-            max_age=300
+            max_age=300,
         )
     return TokenResponseV1(**auth_tokens)
 
@@ -111,7 +120,7 @@ async def create_access_token(
     request: Request,
     response: Response,
     api_client: APIClientV1,
-    refresh_token: AccessTokenCreateV1,
+    auth_token: AuthTokenRequestV1,
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
     web_client: bool = False
@@ -126,6 +135,11 @@ async def create_access_token(
         else:
             web_client: bool = True
 
+    if web_client:
+        refresh_token: str = request.cookies.get("refresh_token")
+    else:
+        refresh_token: str = auth_token.refresh_token
+
     auth_tokens: dict = await auth_service_v1.create_access_token(
         refresh_token, session
     )
@@ -137,7 +151,7 @@ async def create_access_token(
             httponly=True,
             secure=settings.ENVIRONMENT == "production",
             samesite="lax",
-            max_age=180
+            max_age=180,
         )
 
         response.set_cookie(
@@ -146,7 +160,7 @@ async def create_access_token(
             httponly=True,
             secure=settings.ENVIRONMENT == "production",
             samesite="lax",
-            max_age=300
+            max_age=300,
         )
     return TokenResponseV1(**auth_tokens)
 
@@ -159,14 +173,27 @@ async def create_access_token(
 )
 async def log_user_out(
     request: Request,
+    api_client: APIClientV1,
+    auth_token: AuthTokenRequestV1,
     curr_user: Annotated[User, Depends(get_current_active_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    refresh_token: str = request.cookies.get("refresh_token")
+    web_client: bool = False
     version: str | None = request.headers.get("X-API-Version")
 
     if not version:
         raise VersionError()
+
+    if api_client.client:
+        if api_client.client.lower() != "web":
+            raise InvalidParameterError(param="client")
+        else:
+            web_client: bool = True
+
+    if web_client:
+        refresh_token: str = request.cookies.get("refresh_token")
+    else:
+        refresh_token: str = auth_token.refresh_token
 
     await auth_service_v1.log_out(refresh_token, curr_user, session)
     return LogoutResponseV1(message="Log out completed sucessfully")

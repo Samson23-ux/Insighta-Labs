@@ -1,11 +1,15 @@
+import json
 import ijson
+import base64
 import aiofiles
+import itsdangerous
 import pytest_asyncio
 from uuid6 import uuid7
 from pathlib import Path
 from sqlalchemy.pool import NullPool
 from datetime import datetime, timezone
-from httpx import AsyncClient, ASGITransport
+from unittest.mock import patch, AsyncMock
+from httpx import AsyncClient, ASGITransport, Response
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -19,9 +23,15 @@ from sqlalchemy.ext.asyncio import (
 from app.main import app
 from app.database.base import Base
 from app.core.config import settings
+from app.api.models.users import User
 from app.dependencies import get_session
 from app.api.models.profiles import Profile
-from app.api.services.profile_service import profile_service
+from app.api.models.auth import RefreshToken
+from app.api.services.user_service import user_service_v1
+from app.api.services.profile_service import profile_service_v1
+
+
+BASE_PATH: str = app.api.services.auth_service
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -52,7 +62,7 @@ async def async_session(async_engine: AsyncEngine):
         autocommit=False,
         autoflush=False,
         expire_on_commit=False,
-        join_transaction_mode="create_savepoint"
+        join_transaction_mode="create_savepoint",
     )
 
     async_session: AsyncSession = session()
@@ -78,7 +88,9 @@ async def async_client(async_session: AsyncSession):
 
 @pytest_asyncio.fixture
 async def seed_database(async_session: AsyncSession):
-    file_path: Path = Path(__file__).parent.parent / "app" / "scripts" / "seed_profiles.json"
+    file_path: Path = (
+        Path(__file__).parent.parent / "app" / "scripts" / "seed_profiles.json"
+    )
 
     profiles: list[dict] = []
     async with aiofiles.open(file_path, "rb") as json_file:
@@ -92,4 +104,73 @@ async def seed_database(async_session: AsyncSession):
             profiles.append(v)
             i += 1
 
-    await profile_service.create_profiles(profiles, async_session)
+    await profile_service_v1.create_profiles(profiles, async_session)
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def create_admin(async_session: AsyncSession):
+    admin_user: User = User(
+        id=uuid7(),
+        github_id="fake_github_id",
+        username="fake_admin_username",
+        email="fakeadmin@example.com",
+        avatar_url="fake_avatar_url",
+        role="admin",
+        last_login_at=datetime.now(timezone.utc)
+    )
+    await user_service_v1.create_user(admin_user, async_session)
+
+
+@pytest_asyncio.fixture
+async def sign_in(async_client: AsyncClient):
+    sign_in_res: Response = await async_client.get(
+        "/auth/github",
+        follow_redirects=False,
+        headers={
+            "X-API-Version": 1,
+            "env": "testing",
+        },
+    )
+
+    assert sign_in_res.status_code == 302
+
+    session_cookie = sign_in_res.cookies.get("session")
+
+    signer = itsdangerous.TimestampSigner(settings.SESSION_SECRET_KEY)
+    data = signer.unsign(session_cookie)
+    client_data: dict = json.loads(base64.b64decode(data))
+
+    state: str = client_data.get("state")
+
+    fake_github_token: dict = {"access_token": "fakeaccesstoken"}
+    user_profile: dict = {
+        "id": "fakerandomid",
+        "email": "fakeadmin@example.com",
+    }
+
+    callback_json_patch: AsyncMock = patch(
+        f"{BASE_PATH}.res.json", new_callable=AsyncMock
+    ).start()
+    profile_patch: AsyncMock = patch(
+        f"{BASE_PATH}.get_user_profile", new_callable=AsyncMock
+    ).start()
+    callback_patch: AsyncMock = patch(
+        f"{BASE_PATH}.github_client.post", new_callable=AsyncMock
+    ).start()
+
+    profile_patch.return_value = user_profile
+    callback_json_patch.return_value = fake_github_token
+
+    callback_res: Response = await async_client.get(
+        f"/auth/github/callback?code=fakegithubcode&state={state}",
+        headers={
+            "X-API-Version": 1,
+            "env": "testing",
+        },
+    )
+
+    profile_patch.stop()
+    callback_patch.stop()
+    callback_json_patch.stop()
+
+    return callback_res
