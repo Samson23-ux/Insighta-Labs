@@ -1,3 +1,4 @@
+import asyncio
 from uuid6 import uuid7
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,3 +39,7 @@ async def create_admin():
         await session.rollback()
     finally:
         await session.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(create_admin())

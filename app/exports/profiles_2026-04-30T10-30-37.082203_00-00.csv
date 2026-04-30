@@ -1,0 +1,11 @@
+id,name,gender,gender_probability,age,age_group,country_id,country_name,country_probability,created_at
+019db6ba-8cd0-7769-8f59-57833e7c1eb0,Akinyi Warsame,female,0.7,6,child,KE,Kenya,0.27,2026-04-22 19:46:11.239778+00:00
+019db6ba-8ded-75c8-b439-94ad9102aae3,Thandiwe Nxumalo,female,0.66,7,child,KE,Kenya,0.12,2026-04-22 19:46:11.241194+00:00
+019db6ba-9087-75e0-ab94-9dfa57b7d1da,Hauwa Tadesse,female,0.92,7,child,KE,Kenya,0.62,2026-04-22 19:46:11.244675+00:00
+019db6ba-8ce8-749a-bcbb-dd254a88af72,Almaz Girma,female,0.7,10,child,KE,Kenya,0.72,2026-04-22 19:46:11.239897+00:00
+019db6ba-8c26-74f6-a1c6-0f39b65bb6d7,Amina Adhiambo,female,0.86,10,child,KE,Kenya,0.74,2026-04-22 19:46:11.238912+00:00
+019db6ba-8aab-7897-9d17-63c05acd16ae,Nandi Achieng,female,0.83,13,teenager,KE,Kenya,0.36,2026-04-22 19:46:11.236916+00:00
+019db6ba-88b9-77c8-b63a-f5264e10ffb1,Rakiya Otieno,female,0.97,14,teenager,KE,Kenya,0.38,2026-04-22 19:46:11.234322+00:00
+019db6ba-8ef9-7902-a242-fd9cbdc5a925,Mumbi Abebe,female,0.66,15,teenager,KE,Kenya,0.63,2026-04-22 19:46:11.242558+00:00
+019db6ba-9035-730b-9735-c2ab3e941f7a,Almaz Mohamed,female,0.9,16,teenager,KE,Kenya,0.81,2026-04-22 19:46:11.244256+00:00
+019db6ba-8dcc-75cf-bcf9-d4b98e8aa64d,Nompumelelo Mthembu,female,0.72,18,teenager,KE,Kenya,0.84,2026-04-22 19:46:11.241029+00:00

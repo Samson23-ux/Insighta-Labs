@@ -2,17 +2,19 @@ from uuid import uuid4
 from typing import Annotated
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Request, Depends, Response, Query
+from fastapi import APIRouter, Request, Depends, Response, Query, Header
 
 
+from app.limiter import limiter
 from app.core.config import settings
 from app.api.models.users import User
-from app.core.security import hash_code_challenge
+from app.api.schemas.users import UserResponseV1, UserV1
+from app.api.services.user_service import user_service_v1
 from app.api.services.auth_service import auth_service_v1
 from app.dependencies import get_session, get_current_active_user
+from app.core.security import hash_code_challenge, get_code_verifier
 from app.core.exceptions import VersionError, InvalidParameterError, AuthorizationError
 from app.api.schemas.auth import (
-    APIClientV1,
     LoginResponseV1,
     TokenResponseV1,
     LogoutResponseV1,
@@ -29,22 +31,22 @@ auth_router_v1 = APIRouter()
     response_class=RedirectResponse,
     description="Sign up with github",
 )
+@limiter.limit("10/minute")
 async def sign_in(
     request: Request,
+    x_api_version: Annotated[str, Header()],
     api_client: Annotated[
         str, Query(description="Client attribute must be set to web for web clients")
     ] = None,
 ):
-    version: str | None = request.headers.get("X-API-Version")
-
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     state: str = str(uuid4())
-    code_challenge: str = str(uuid4())
-    hashed_code_challenge: str = await hash_code_challenge(code_challenge)
+    code_verifier: str = get_code_verifier()
+    code_challenge: str = await hash_code_challenge(code_verifier)
 
-    client_data: dict = {"state": state, "code_challenge": code_challenge}
+    client_data: dict = {"state": state, "code_verifier": code_verifier}
 
     if api_client:
         if api_client.lower() != "web":
@@ -58,8 +60,9 @@ async def sign_in(
         f"{settings.GITHUB_AUTHORIZE_URL}"
         f"?client_id={settings.GITHUB_CLIENT_ID}"
         f"&redirect_uri={settings.GITHUB_CALLBACK_URL}"
-        f"&scope=user&state={state}"
-        f"&code_challenge={hashed_code_challenge}"
+        f"&scope=read:user user:email"
+        f"&state={state}"
+        f"&code_challenge={code_challenge}"
         f"&code_challenge_method=S256"
     )
     return RedirectResponse(url, 302)
@@ -71,36 +74,49 @@ async def sign_in(
     response_model=LoginResponseV1,
     description="Github callback url",
 )
+@limiter.limit("10/minute")
 async def github_callback(
     request: Request,
     response: Response,
+    x_api_version: Annotated[str, Header()],
     session: Annotated[AsyncSession, Depends(get_session)],
+    # api_client: Annotated[
+    #     str, Query(description="Client attribute must be set to web for web clients")
+    # ] = None,
     error: str = None,
     state: str = None,
     code: str = None,
     code_verifier: str = None,
 ):
-    version: str | None = request.headers.get("X-API-Version")
+    saved_state = None
+    github_client = None
 
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     if error:
         raise AuthorizationError()
-
-    github_client = request.app.state.github
-
+    
     client_data: dict = request.session.get("client_data")
+    api_client: str = client_data.get("client")
 
-    client: str = client_data.get("client")
-    saved_state: str = client_data.get("state")
-    code_verifier: str = client_data.get("code_challenge")
+    if api_client:
+        github_client = request.app.state.github
+        saved_state: str = client_data.get("state")
+        code_verifier: str = client_data.get("code_verifier")
 
     auth_tokens, user_profile = await auth_service_v1.sign_up_with_github(
-        request.url, code, saved_state, state, code_verifier, github_client, session
+        request.url,
+        code,
+        state,
+        api_client,
+        saved_state,
+        code_verifier,
+        github_client,
+        session,
     )
 
-    if client:
+    if api_client:
         response.set_cookie(
             key="access_token",
             value=auth_tokens["access_token"],
@@ -118,7 +134,28 @@ async def github_callback(
             samesite="lax",
             max_age=300,
         )
+
     return LoginResponseV1(**auth_tokens, user_profile=user_profile)
+
+
+@auth_router_v1.get(
+    "/auth/me",
+    status_code=200,
+    response_model=UserResponseV1,
+    description="Get current user",
+)
+@limiter.limit("10/minute")
+async def get_user(
+    request: Request,
+    x_api_version: Annotated[str, Header()],
+    curr_user: Annotated[User, Depends(get_current_active_user)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    if not x_api_version:
+        raise VersionError()
+
+    user: UserV1 = await user_service_v1.get_user_account(curr_user)
+    return UserResponseV1(data=user)
 
 
 @auth_router_v1.post(
@@ -127,21 +164,24 @@ async def github_callback(
     response_model=TokenResponseV1,
     description="Create a new access token using a valid refresh token",
 )
+@limiter.limit("10/minute")
 async def create_access_token(
     request: Request,
     response: Response,
-    api_client: APIClientV1,
+    x_api_version: Annotated[str, Header()],
     auth_token: AuthTokenRequestV1,
     session: Annotated[AsyncSession, Depends(get_session)],
+    api_client: Annotated[
+        str, Query(description="Client attribute must be set to web for web clients")
+    ] = None,
 ):
     web_client: bool = False
-    version: str | None = request.headers.get("X-API-Version")
 
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
-    if api_client.client:
-        if api_client.client.lower() != "web":
+    if api_client:
+        if api_client.lower() != "web":
             raise InvalidParameterError(param="client")
         else:
             web_client: bool = True
@@ -182,21 +222,24 @@ async def create_access_token(
     response_model=LogoutResponseV1,
     description="Log out account",
 )
+@limiter.limit("10/minute")
 async def log_user_out(
     request: Request,
-    api_client: APIClientV1,
+    x_api_version: Annotated[str, Header()],
     auth_token: AuthTokenRequestV1,
     curr_user: Annotated[User, Depends(get_current_active_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
+    api_client: Annotated[
+        str, Query(description="Client attribute must be set to web for web clients")
+    ] = None,
 ):
     web_client: bool = False
-    version: str | None = request.headers.get("X-API-Version")
 
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
-    if api_client.client:
-        if api_client.client.lower() != "web":
+    if api_client:
+        if api_client.lower() != "web":
             raise InvalidParameterError(param="client")
         else:
             web_client: bool = True

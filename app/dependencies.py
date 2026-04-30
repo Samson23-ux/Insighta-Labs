@@ -1,6 +1,7 @@
+import httpx
 from uuid import UUID
 from typing import Annotated
-from fastapi import Request, Depends
+from fastapi import Request, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -24,10 +25,20 @@ async def get_session():
         await session.close()
 
 
-async def get_client(request: Request):
-    agify_client = request.app.state.agify
-    genderize_client = request.app.state.genderize
-    nationalize_client = request.app.state.nationalize
+async def get_client(request: Request, api_client: Annotated[
+        str, Query(description="Client attribute must be set to web for web clients")
+    ] = None
+):
+    if api_client:
+        agify_client = request.app.state.agify
+        genderize_client = request.app.state.genderize
+        nationalize_client = request.app.state.nationalize
+    else:
+        agify_client = httpx.AsyncClient(base_url=settings.AGIFY_API_URL, timeout=10.0)
+        genderize_client = httpx.AsyncClient(base_url=settings.GENDERIZE_API_URL, timeout=10.0)
+        nationalize_client = httpx.AsyncClient(
+            base_url=settings.NATIONALIZE_API_URL, timeout=10.0
+        )
 
     return agify_client, genderize_client, nationalize_client
 
@@ -40,9 +51,13 @@ async def get_current_user(
     token = None
 
     if creds:
-        token: str = creds.credentials
+        if creds.credentials:
+            token: str = creds.credentials
     else:
         token: str = request.cookies.get("access_token")
+
+    if not token:
+        raise AuthenticationError()
 
     key: str = settings.ACCESS_TOKEN_SECRET_KEY
     payload: dict = await decode_token(token, key)

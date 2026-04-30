@@ -1,3 +1,5 @@
+import os
+import base64
 import hashlib
 from typing import Optional
 from uuid import uuid4, UUID
@@ -15,8 +17,13 @@ async def hash_token(token: str):
     return hashlib.sha256(token_bytes).hexdigest()
 
 
-async def hash_code_challenge(code_challenge: str):
-    return hashlib.sha256(code_challenge.encode(encoding="utf-8"))
+async def hash_code_challenge(verifier: str):
+    digest = hashlib.sha256(verifier.encode(encoding="utf-8")).digest()
+    return base64.urlsafe_b64encode(digest).decode().rstrip("=")
+
+
+def get_code_verifier():
+    return base64.urlsafe_b64encode(os.urandom(32)).decode().rstrip("=")[:43]
 
 
 async def create_access_token(

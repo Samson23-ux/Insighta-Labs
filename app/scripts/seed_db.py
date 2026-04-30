@@ -1,4 +1,5 @@
 import json
+import asyncio
 import aiofiles
 from uuid6 import uuid7
 from pathlib import Path
@@ -30,7 +31,7 @@ async def seed_profiles():
     try:
         limit: int = 50
         session: AsyncSession = async_session()
-        profiles: Sequence[Profile] = await profile_service._get_profiles(
+        profiles: Sequence[Profile] = await profile_service_v1._get_profiles(
             limit, session
         )
 
@@ -49,10 +50,14 @@ async def seed_profiles():
                 profile["id"] = uuid7()
                 profile["created_at"] = datetime.now(timezone.utc)
 
-            await profile_service.create_profiles(profiles, session)
+            await profile_service_v1.create_profiles(profiles, session)
             await session.commit()
     except Exception as e:
         await session.rollback()
         raise ServerError() from e
     finally:
         await session.close()
+
+
+if __name__ == "__main__":
+    asyncio.run(seed_profiles())

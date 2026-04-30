@@ -1,6 +1,5 @@
 from uuid import UUID
 from uuid6 import uuid7
-from fastapi import Request
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from httpx import AsyncClient, ConnectError, ConnectTimeout, Response
@@ -76,12 +75,12 @@ class AuthServiceV1:
         url: str,
         code: str,
         url_state: str,
+        api_client: str,
         saved_state: str,
         code_verifier: str,
         client: AsyncClient,
         session: AsyncSession,
     ) -> tuple:
-
         if saved_state and url_state:
             if saved_state != url_state:
                 raise AuthorizationError()
@@ -93,16 +92,30 @@ class AuthServiceV1:
         while curr_retries < total_retries and status == "failure":
             try:
                 data: dict = {
-                    "client_id": settings.GITHUB_CLIENT_ID,
-                    "client_secret": settings.GITHUB_CLIENT_SECRET,
                     "code": code,
-                    "redirect_uri": url,
                     "code_verifier": code_verifier,
                 }
                 header: dict = {"Accept": "application/json"}
-                res: Response = await client.post(
-                    settings.GITHUB_ACCESS_TOKEN_URL, data=data, headers=header
-                )
+
+                if api_client:
+                    data["client_id"] = settings.GITHUB_CLIENT_ID
+                    data["client_secret"] = settings.GITHUB_CLIENT_SECRET
+                    data["redirect_uri"] = settings.GITHUB_CALLBACK_URL
+
+                    res: Response = await client.post(
+                        settings.GITHUB_ACCESS_TOKEN_URL, data=data, headers=header
+                    )
+                else:
+                    data["client_id"] = settings.GITHUB_CLI_CLIENT_ID
+                    data["client_secret"] = settings.GITHUB_CLI_CLIENT_SECRET
+                    data["redirect_uri"] = settings.REDIRECT_CLI_URI
+
+                    client = AsyncClient(
+                        base_url=settings.AGIFY_API_URL, timeout=10.0
+                    )
+                    res: Response = await client.post(
+                        settings.GITHUB_ACCESS_TOKEN_URL, data=data, headers=header
+                    )
 
                 status: str = "success"
             except (ConnectError, ConnectTimeout):
@@ -136,21 +149,22 @@ class AuthServiceV1:
         try:
             if user:
                 if user.role == "admin":
-                    user_profile["github_id"] = user_profile["id"]
-                    user_profile["username"] = user_profile["login"]
+                    copied_user: dict = user_profile.copy()
+                    copied_user["github_id"] = str(copied_user["id"])
+                    copied_user["username"] = copied_user["login"]
 
-                    user_profile.pop("id")
-                    user_profile.pop("login")
-                    user_profile.pop("created_at")
+                    copied_user.pop("id")
+                    copied_user.pop("login")
+                    copied_user.pop("created_at")
 
-                    for k, v in user_profile.items():
+                    for k, v in copied_user.items():
                         setattr(user, k, v)
 
                     await user_service_v1.update_user(user, session)
             else:
                 user: User = User(
                     id=uuid7(),
-                    github_id=user_profile["github_id"],
+                    github_id=str(user_profile["id"]),
                     username=user_profile["login"],
                     email=user_profile["email"],
                     avatar_url=user_profile["avatar_url"],
@@ -159,18 +173,29 @@ class AuthServiceV1:
                 )
 
                 await user_service_v1.create_user(user, session)
+            user_id = user.id
+
+            token_data: TokenDataV1 = TokenDataV1(id=user_id)
+            auth_tokens: dict = await prepare_tokens(user_id, token_data)
+
+            refresh_token_db = auth_tokens.pop("refresh_token_db")
+            await auth_repo_v1.add_token_to_db(refresh_token_db, session)
+
+            if not api_client:
+                await client.aclose()
             await session.commit()
         except Exception as e:
             await session.rollback()
             raise ServerError() from e
 
-        token_data: TokenDataV1 = TokenDataV1(id=user.id)
-        auth_tokens: dict = await prepare_tokens(user.id, token_data)
+        user_profile_out: dict = {
+            "id": user_profile["id"],
+            "username": user_profile["login"],
+            "email": user_profile["email"],
+            "avatar_url": user_profile["avatar_url"]
+        }
 
-        refresh_token_db = auth_tokens.pop("refresh_token_db")
-        await auth_repo_v1.add_token_to_db(refresh_token_db, session)
-
-        return auth_tokens, user_profile
+        return auth_tokens, user_profile_out
 
     async def create_access_token(
         self, refresh_token: str, session: AsyncSession

@@ -1,0 +1,11 @@
+id,name,gender,gender_probability,age,age_group,country_id,country_name,country_probability,created_at
+019db6ba-88a2-783a-9d9e-fc468e73f529,Awino Hassan,female,0.66,68,senior,TZ,Tanzania,0.6,2026-04-22 19:46:11.234147+00:00
+019db6ba-88a3-70dc-b7ec-781fc813dc78,Mercy Agyei,female,0.79,9,child,NG,Nigeria,0.11,2026-04-22 19:46:11.234181+00:00
+019db6ba-88a4-7214-bfcf-b7a376e8f3c6,Hassan Girma,male,0.85,37,adult,UG,Uganda,0.38,2026-04-22 19:46:11.234190+00:00
+019db6ba-88a5-7d73-85b6-566b2bb7e7a1,Nabil Saidi,male,0.8,80,senior,SD,Sudan,0.49,2026-04-22 19:46:11.234197+00:00
+019db6ba-88a6-78e6-92dd-845ee36baddd,Kimberly Scott,female,0.9,5,child,US,United States,0.34,2026-04-22 19:46:11.234203+00:00
+019db6ba-88a7-71ed-8e3e-d0c96547daf0,Nandi Girma,female,0.8,57,adult,MG,Madagascar,0.4,2026-04-22 19:46:11.234209+00:00
+019db6ba-88a8-7486-b373-2b06c370726f,John Adams,male,0.98,37,adult,GB,United Kingdom,0.52,2026-04-22 19:46:11.234214+00:00
+019db6ba-88a9-7b75-8259-e7417574b84f,Elizabeth Harris,female,0.77,32,adult,IN,India,0.11,2026-04-22 19:46:11.234219+00:00
+019db6ba-88aa-7f25-a1ba-bbe580056d1b,Anne Kasavubu,female,0.88,43,adult,CM,Cameroon,0.29,2026-04-22 19:46:11.234224+00:00
+019db6ba-88ab-786c-b62c-0d3008252a48,Yaa Adomou,female,0.78,50,adult,CV,Cape Verde,0.28,2026-04-22 19:46:11.234229+00:00

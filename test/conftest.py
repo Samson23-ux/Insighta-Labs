@@ -124,7 +124,7 @@ async def create_admin(async_session: AsyncSession):
 @pytest_asyncio.fixture
 async def sign_in(async_client: AsyncClient):
     sign_in_res: Response = await async_client.get(
-        "/auth/github",
+        "/auth/github?api_client=web",
         follow_redirects=False,
         headers={
             "X-API-Version": "1",
@@ -141,14 +141,16 @@ async def sign_in(async_client: AsyncClient):
     client_data: dict = json.loads(base64.b64decode(data))["client_data"]
 
     state: str = client_data.get("state")
+    # api_client: str = client_data.get("client")
 
     fake_github_token: dict = {"access_token": "fakeaccesstoken"}
     user_profile: dict = {
         "id": "fakerandomid",
         "avatar_url": "fake_avatar_url",
         "login": "fake_username",
-        "email": "fakeuser@example.com",
-        "github_id": "fake_github_id_1"
+        "email": "fakeadmin@example.com",
+        "github_id": "fake_github_id",
+        "created_at": datetime.now(timezone.utc)
     }
 
     mock_client = AsyncMock()
@@ -177,3 +179,18 @@ async def sign_in(async_client: AsyncClient):
     await profile_patch.stop()
 
     return callback_res
+
+
+@pytest_asyncio.fixture
+async def set_state(async_client: AsyncClient):
+    app.state.agify = AsyncClient(base_url=settings.AGIFY_API_URL, timeout=10.0)
+    app.state.genderize = AsyncClient(base_url=settings.GENDERIZE_API_URL, timeout=10.0)
+    app.state.nationalize = AsyncClient(
+        base_url=settings.NATIONALIZE_API_URL, timeout=10.0
+    )
+
+    yield
+
+    await app.state.agify.aclose()
+    await app.state.genderize.aclose()
+    await app.state.nationalize.aclose()

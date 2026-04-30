@@ -13,14 +13,17 @@ async def test_create_access_token(async_client: AsyncClient, sign_in: Response)
     json_res = sign_in.json()
     refresh_token: str = json_res["refresh_token"]
 
+    auth_token: dict = {"refresh_token": refresh_token}
+
     res = await async_client.post(
         "/auth/refresh",
-        json={"refresh_token": refresh_token},
+        json=auth_token,
         headers={
             "X-API-Version": "1",
             "env": "testing",
         },
     )
+    print(res.json())
 
     assert res.status_code == 201
     assert "access_token" in res.json()
@@ -32,9 +35,11 @@ async def test_logout(async_client: AsyncClient, sign_in: Response):
     access_token: str = json_res["access_token"]
     refresh_token: str = json_res["refresh_token"]
 
+    auth_token: dict = {"refresh_token": refresh_token}
+
     res = await async_client.post(
         "/auth/logout",
-        json={"refresh_token": refresh_token},
+        json=auth_token,
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",

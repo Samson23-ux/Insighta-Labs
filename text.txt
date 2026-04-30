@@ -1,0 +1,66 @@
+## Natural Language Parsing
+
+Natural languages are parsed and converted to their underlying filter which are used to query the database for specific profiles.
+
+### Processing Steps
+
+- The received query words are normalized to remove `s` suffix from words and also exclude unsupported keywords
+- Each normalized keyword is mapped against its filter, identified by the keyword's class (gender, age_group, etc.)
+- The mapped keywords are then used to filter the profiles in the database to return only profiles that meet the requirements
+- A QueryError exception is raised when invalid keywords are detected or when the keywords are arranged in a way that go against the rules
+
+### Supported Keywords and Their Mapped Filters
+
+#### Gender
+
+- **Keywords**: `male`, `female`
+- **Example**: gender=male
+
+#### Age Groups
+
+- **Keywords**: `child`, `teenager`, `adult`, `senior`, `young`
+- **Example**: age_group=adult
+- **Note**: The keyword `young` maps to ages 16-24 (e.g., age >= 16 and age <= 24)
+
+#### Range Operators
+
+- **Keywords**: `above`, `below`, `equal`, `minimum`, `maximum`, `between`
+- **Operator Mappings**:
+  - `above`: >
+  - `below`: <
+  - `equal`: =
+  - `minimum`: >=
+  - `maximum`: <=
+  - `between`: >= and <=
+
+#### Logical Operators
+
+- **Keywords**: `or`, `and`
+
+#### Country Names
+
+- Full country names (e.g., "United States", "Nigeria")
+
+### Example Queries
+
+- `"young male"` → Males aged 16-24
+- `"female above 30"` → Females 30 and above
+- `"adults or senior"` → Adults or seniors
+- `"males between 25 and 60"` → Males aged 25-60
+- `"females from United States"` → Females from the US
+
+### Rules
+
+- ISO country codes (alpha_2 and alpha_3) are not supported
+- Age values should be passed as positive integers. Floating point numbers and words are not supported
+- When different values are passed for the same field (gender, age_group, etc.), the second value takes precedence over the first. An exception to this is when the two values are passed as operands to the `or` logical operator
+- When range keywords are used, they should come before the age value (e.g., "male above 20" and not "male 20 and above")
+
+### Limitations
+
+- No support for name queries
+- Only support for English words
+- No support for country ISO code
+- No normalization for words with `es` suffix
+- No identification of age values when written as words
+- No filter mapping for probability fields (min_gender_probability, min_country_probability) and support for float

@@ -62,8 +62,11 @@ class ProfileRepoV1:
         if sort_by:
             sort = sortable_fields.get(sort_by.lower())
 
-            if order.lower() == "desc":
-                stmt = stmt.order_by(desc(sort))
+            if order:
+                if order.lower() == "desc":
+                    stmt = stmt.order_by(desc(sort))
+                else:
+                    stmt = stmt.order_by(sort)
             else:
                 stmt = stmt.order_by(sort)
 

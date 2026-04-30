@@ -4,7 +4,7 @@ from typing import Annotated
 from datetime import datetime, timezone
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Header
 
 
 from app.api.models.users import User
@@ -31,6 +31,7 @@ profile_router_v1 = APIRouter()
 )
 async def get_all_profiles(
     request: Request,
+    x_api_version: Annotated[str, Header()],
     _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
     session: Annotated[AsyncSession, Depends(get_session)],
     gender: Annotated[
@@ -67,9 +68,7 @@ async def get_all_profiles(
         str, Query(description="Set the total profiles to return per page")
     ] = "10",
 ):
-    version: str | None = request.headers.get("X-API-Version")
-
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     data: dict = await profile_service_v1.get_profiles(
@@ -102,6 +101,7 @@ async def get_all_profiles(
 )
 async def search_for_profiles(
     request: Request,
+    x_api_version: Annotated[str, Header()],
     _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
     session: Annotated[AsyncSession, Depends(get_session)],
     q: Annotated[str, Query(description="Query field to search for profiles")],
@@ -110,8 +110,7 @@ async def search_for_profiles(
         str, Query(description="Set the total profiles to return per page")
     ] = "10",
 ):
-    version: str | None = request.headers.get("X-API-Version")
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     data: dict = await profile_service_v1.search_for_profiles(
@@ -136,6 +135,7 @@ async def search_for_profiles(
 )
 async def export_csv(
     request: Request,
+    x_api_version: Annotated[str, Header()],
     format: Annotated[
         str, Query(description="Export format. Only csv format is supported")
     ],
@@ -175,9 +175,7 @@ async def export_csv(
         str, Query(description="Set the total profiles to return per page")
     ] = "10",
 ):
-    version: str | None = request.headers.get("X-API-Version")
-
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     export_path: Path = await profile_service_v1.export_csv(
@@ -212,12 +210,11 @@ async def export_csv(
 async def get_profile_by_id(
     request: Request,
     profile_id: UUID,
+    x_api_version: Annotated[str, Header()],
     _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    version: str | None = request.headers.get("X-API-Version")
-
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     profile: ProfileV1 = await profile_service_v1.get_profile(profile_id, session)
@@ -232,14 +229,13 @@ async def get_profile_by_id(
 )
 async def create_profile(
     request: Request,
+    x_api_version: Annotated[str, Header()],
     profile_create: ProfileCreateV1,
     _: Annotated[User, Depends(required_roles(["admin"]))],
     client: Annotated[tuple, Depends(get_client)],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    version: str | None = request.headers.get("X-API-Version")
-
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     profile_data: dict = await profile_service_v1.create_profile(
@@ -261,12 +257,11 @@ async def create_profile(
 async def delete_profile(
     request: Request,
     profile_id: UUID,
+    x_api_version: Annotated[str, Header()],
     _: Annotated[User, Depends(required_roles(["admin"]))],
     session: Annotated[AsyncSession, Depends(get_session)],
 ):
-    version: str | None = request.headers.get("X-API-Version")
-
-    if not version:
+    if not x_api_version:
         raise VersionError()
 
     await profile_service_v1.delete_profile(profile_id, session)

@@ -20,12 +20,6 @@ class AuthTokenRequestV1(BaseModel):
     )
 
 
-class APIClientV1(BaseModel):
-    client: Optional[str] = Field(
-        default=None, description="client attribute must be set to web for web clients"
-    )
-
-
 class TokenResponseV1(BaseModel):
     status: str = "success"
     access_token: str

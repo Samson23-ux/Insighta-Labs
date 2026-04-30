@@ -48,4 +48,9 @@ class Settings(BaseSettings):
     # admin credentials
     ADMIN_EMAIL: str
 
+    # cli
+    GITHUB_CLI_CLIENT_ID: str
+    GITHUB_CLI_CLIENT_SECRET: str
+    REDIRECT_CLI_URI: str
+
 settings: Settings = Settings()

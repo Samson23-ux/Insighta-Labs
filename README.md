@@ -1,119 +1,203 @@
-# Profile Management and Query API
+# Insighta Labs+ — Backend
 
-A modern, async REST API for managing demographic profiles with intelligent natural language query parsing capabilities.
+Central API server for the Insighta Labs+ Profile Intelligence System. Serves as the single source of truth for authentication, user management, profile data, and access control across all interfaces.
 
-## Features
+**Live API:** _[link to be added]_
 
-- **Intelligent Query Search**: Parse natural language-like queries (e.g., "young male or female above 30")
-- **Async Architecture**: Full async/await support with AsyncPG for high-performance database operations
-- **Advanced Filtering**: Filter by gender, age group, country, age range, and probability thresholds
-- **Pagination & Sorting**: Flexible pagination with configurable page sizes and multiple sort options
-- **Comprehensive Testing**: Full test suite with async fixtures and database seeding
-- **Error Handling**: Intuitive error messages that describe what went wrong to the user
+**Related repositories:**
+- CLI: `https://github.com/Samson23-ux/Insighta-Labs-Cli` — terminal interface with GitHub OAuth + PKCE
+- Web Portal: _[link to be added]_ — browser-based interface for non-technical users
 
-## Performance Considerations
+---
 
-- **Async/Await**: Non-blocking database operations
-- **Connection Pooling**: SQLAlchemy manages connection pooling
-- **Strategic Indexing**: Composite indexes on frequently filtered columns
-- **Pagination**: Default limit of 10 prevents large result sets
-- **Query Optimization**: Efficient LIKE patterns for text search
+## System Architecture
 
-## Technology Stack
-
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![Uvicorn](https://img.shields.io/badge/Uvicorn-4B8BBE?style=for-the-badge&logo=uvicorn&logoColor=white)
-![Pydantic](https://img.shields.io/badge/Pydantic-2C3E50?style=for-the-badge&logo=pydantic&logoColor=white)
-![Postgres](https://img.shields.io/badge/Postgres-336791?style=for-the-badge&logo=postgresql&logoColor=white)
-
-## Installation
-
-### Prerequisites
-
-- Python 3.10+
-- PostgreSQL 12+
-- pip or poetry
-
-### Setup
-
-1. **Clone or navigate to the project directory**
-   ```bash
-   cd "HNG Stage2 Task"
-   ```
-
-2. **Create and activate a virtual environment**
-   ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
-   # On macOS/Linux:
-   source venv/bin/activate
-   ```
-
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configure environment variables**
-   - Copy `env-demo.txt` to `.env`:
-     ```bash
-     cp env-demo.txt .env
-     ```
-   - Update `.env` with your database credentials:
-     ```env
-     SYNC_DB_URL=postgresql+psycopg2://user:password@localhost/your_database
-     ASYNC_DB_URL=postgresql+asyncpg://user:password@localhost/your_database
-     ASYNC_TEST_DB_URL=postgresql+asyncpg://user:password@localhost/your_test_database
-     ```
-
-5. **Create database**
-   ```sql
-   createdb your_database
-   createdb your_test_database  # For running tests
-   ```
-
-6. **Run migrations**
-   ```bash
-   alembic upgrade head
-   ```
-
-7. **Seed the database (optional)**
-   ```bash
-   python -m app.api.scripts.seed_db
-   ```
-
-## Usage
-
-### Start the Server
-
-```bash
-uvicorn app.main:app --reload
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      CLIENT INTERFACES                       │
+│                                                              │
+│   ┌─────────────────┐          ┌───────────────────────┐    │
+│   │   Insighta CLI  │          │  Insighta Web Portal  │    │
+│   │  (OAuth + PKCE) │          │   (Browser OAuth +    │    │
+│   │  Local tokens   │          │    HTTP-only cookies)  │    │
+│   └────────┬────────┘          └──────────┬────────────┘    │
+└────────────┼──────────────────────────────┼─────────────────┘
+             │                              │
+             │   HTTPS + Bearer token       │   HTTPS + Cookies
+             │                              │
+             ▼                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     BACKEND (this repo)                      │
+│                                                              │
+│   ┌──────────────┐   ┌──────────────┐   ┌───────────────┐   │
+│   │  Auth Layer  │   │ Profile APIs │   │  Rate Limiter │   │
+│   │  /auth/*     │   │  /api/*      │   │  + Logger     │   │
+│   └──────┬───────┘   └──────┬───────┘   └───────────────┘   │
+│          │                  │                                 │
+│   ┌──────▼──────────────────▼──────────────────────────┐    │
+│   │                    Database (PostgreSQL)             │    │
+│   │          users table · profiles table               │    │
+│   └─────────────────────────────────────────────────────┘    │
+│                                                              │
+│   ┌──────────────────────────────────────────────────────┐   │
+│   │               External APIs (Stage 1)                │   │
+│   │   Genderize.io · Agify.io · Nationalize.io           │   │
+│   └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+             │
+             ▼
+     ┌───────────────┐
+     │  GitHub OAuth │
+     │  (token       │
+     │   exchange)   │
+     └───────────────┘
 ```
 
-The API will be available at `http://localhost:8000`
+**Design principles:**
+- The backend is the single source of truth — no interface contains business logic
+- All authentication, authorization, and data access go through this API
+- CLI and Web Portal differ only in how they carry auth (Bearer token vs. HTTP-only cookies)
 
-- **API Docs**: `http://localhost:8000/docs` (Swagger UI)
-- **Alternative Docs**: `http://localhost:8000/redoc` (ReDoc)
+---
 
-### Deployed
+## Authentication Flow
 
-- [Live App](https://hng-stage2-task-production-11e5.up.railway.app)
+### CLI Flow (PKCE)
 
-- [API Documentation](https://hng-stage2-task-production-11e5.up.railway.app/docs)
+The CLI cannot safely store a client secret, so it uses **PKCE** (Proof Key for Code Exchange). The backend participates in the exchange without ever trusting a pre-shared secret.
 
-## Testing
-
-Run the test suite with pytest:
-
-```bash
-# Run all tests
-pytest test/
-
-# Run specific test file
-pytest test/test_profiles.py
 ```
+1. CLI generates locally:
+   state         = cryptographically random nonce
+   code_verifier = cryptographically random string (never sent to GitHub)
+   code_challenge = base64url(SHA-256(code_verifier))
+
+2. CLI opens browser to GitHub OAuth:
+   https://github.com/login/oauth/authorize
+     ?client_id=<CLIENT_ID>
+     &redirect_uri=http://localhost:<port>/callback
+     &scope=read:user,user:email
+     &state=<state>
+     &code_challenge=<code_challenge>
+     &code_challenge_method=S256
+
+3. User authenticates. GitHub redirects to:
+   http://localhost:<port>/callback?code=<code>&state=<state>
+
+4. CLI validates state, then calls backend:
+   POST /auth/github/callback
+   { code, code_verifier }
+
+5. Backend:
+   a. Sends { client_id, code, code_verifier, redirect_uri } to GitHub's token endpoint
+   b. GitHub verifies: SHA-256(code_verifier) == code_challenge stored at auth time
+   c. GitHub issues access token
+   d. Backend fetches user info from GitHub API
+   e. Upserts user in database
+   f. Issues: access_token (JWT, 3 min) + refresh_token (JWT, 5 min)
+   g. Returns tokens in response body
+
+6. CLI stores tokens at ~/.insighta/credentials.json
+   Subsequent requests: Authorization: Bearer <access_token>
+```
+
+**Why PKCE is secure:** Even if the authorization code is intercepted, an attacker cannot exchange it without the `code_verifier`, which only the legitimate CLI instance ever possessed.
+
+---
+
+### Web Flow (Browser)
+
+The browser flow does not use PKCE. The backend acts as a confidential OAuth client using the `client_secret`.
+
+```
+1. User clicks "Continue with GitHub"
+   Browser navigates to: GET /auth/github
+   Backend generates state, stores in server-side session, redirects to GitHub
+
+2. User authenticates. GitHub redirects to:
+   GET /auth/github/callback?code=<code>&state=<state>
+
+3. Backend:
+   a. Validates state against session
+   b. Exchanges code + client_secret with GitHub
+   c. Fetches user info, upserts user in database
+   d. Issues access_token + refresh_token
+   e. Sets as HTTP-only cookies:
+      Set-Cookie: access_token=<jwt>; HttpOnly; Secure(for prod); SameSite=Strict
+      Set-Cookie: refresh_token=<token>; HttpOnly; Secure(for prod); SameSite=Strict
+   f. Redirects to web portal /dashboard
+
+4. All subsequent browser requests carry cookies automatically
+   Tokens are never accessible from JavaScript
+```
+
+---
+
+## Token Handling
+
+### Issuance
+
+| Token | Format | Expiry | Storage |
+|---|---|---|---|
+| Access token | JWT (signed HS256) | 3 minutes | CLI: credentials file · Web: HTTP-only cookie |
+| Refresh token | JWT, hashed in DB | 5 minutes | CLI: credentials file · Web: HTTP-only cookie |
+
+### Rotation
+
+Every call to `POST /auth/refresh` invalidates the submitted refresh token immediately and issues a new token pair. A token can only be used once.
+
+```
+POST /auth/refresh
+  → validate refresh token against hashed value in DB
+  → if valid:
+      mark old refresh token as used
+      issue new access_token + refresh_token
+      return { access_token, refresh_token }
+  → if invalid or expired:
+      return 401 Unauthorized
+```
+
+### FastAPI Dependency Behaviour
+
+Every protected endpoint passes through a dependency that:
+
+1. Extracts the token (from `Authorization: Bearer` header or cookie, depending on client)
+2. Verifies the JWT signature and expiry
+3. If expired: attempts to find a valid refresh token (web portal only — transparent refresh)
+4. Attaches the decoded user to the request context
+5. Proceeds or returns `401`
+
+---
+
+## Role Enforcement
+
+Roles are enforced via a dependency applied to all `/api/*` routes.
+
+### Role Definitions
+
+| Role | Permissions |
+|---|---|
+| `admin` | Full access: create profiles, delete profiles, read, search, export |
+| `analyst` | Read-only: list, get, search, export |
+
+Default role on registration: `analyst`
+
+### `is_active` Check
+
+If a user's `is_active` field is `false`, the auth dependency returns `403 Forbidden` on all `/api/*` requests regardless of role. This is checked immediately after token validation, before any role check.
+
+### Route Permission Map
+
+| Method | Endpoint | Min Role |
+|---|---|---|
+| GET | `/api/profiles` | analyst |
+| GET | `/api/profiles/:id` | analyst |
+| GET | `/api/profiles/search` | analyst |
+| GET | `/api/profiles/export` | analyst |
+| POST | `/api/profiles` | admin |
+| DELETE | `/api/profiles/:id` | admin |
+
+---
 
 ## Natural Language Parsing
 
@@ -182,7 +266,98 @@ Natural languages are parsed and converted to their underlying filter which are 
 - No identification of age values when written as words
 - No filter mapping for probability fields (min_gender_probability, min_country_probability) and support for float
 
-## Troubleshooting
+---
+
+## API Reference
+
+### API Versioning
+
+All `/api/*` endpoints require the header:
+
+```
+X-API-Version: 1
+```
+
+Requests missing this header receive:
+
+```json
+{
+  "status": "error",
+  "message": "API version header required"
+}
+```
+**Status:** `400 Bad Request`
+
+---
+
+## Environment Variables
+
+Create a `.env` file and copy the environment template fixing replacing the values with your database URLs ([link to file](./.env.example))
+
+## Running Locally
+
+## Prerequisites
+
+- Python 3.10+
+- PostgreSQL 12+
+- pip (Python package manager)
+
+```bash
+git clone https://github.com/Samson23-ux/Insighta-Labs.git
+cd Insighta-Labs
+
+# Create virtual environment
+
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy and configure environment
+cp .env.example .env
+
+# Run migrations
+alembic upgrade head
+
+# Run seed scripts
+python -m app.scripts.seed_db
+python -m app.scripts.create_admin
+
+# Start the server
+uvicorn app.main:app --reload --port 8000
+```
+
+The API will be available at `http://localhost:8000`.
+
+Interactive docs: `http://localhost:8000/docs`
+
+---
+
+## Testing
+
+```bash
+# Run all tests
+pytest
+
+# Run a specific file
+pytest tests/test_auth.py
+```
+
+### CI/CD
+
+GitHub Actions runs on every PR to `main`:
+- Linting (`ruff` or `flake8`)
+- Runs tests (`pytest`)
+
+---
+
+## Troubleshooting 🔧
 
 ### Database Connection Issues
 

@@ -5,12 +5,12 @@ from httpx import AsyncClient, Response
 
 
 @pytest.mark.asyncio
-async def test_create_profile(async_client: AsyncClient, sign_in: Response):
+async def test_create_profile(async_client: AsyncClient, set_state, sign_in: Response):
     payload: dict = {"name": "sergio"}
     access_token: str = sign_in.json()["access_token"]
 
     res: Response = await async_client.post(
-        "/api/profiles",
+        "/profiles",
         json=payload,
         headers={
             "Authorization": f"Bearer {access_token}",
@@ -25,12 +25,12 @@ async def test_create_profile(async_client: AsyncClient, sign_in: Response):
 
 
 @pytest.mark.asyncio
-async def test_profile_exists(async_client: AsyncClient, sign_in: Response):
+async def test_profile_exists(async_client: AsyncClient, set_state, sign_in: Response):
     payload: dict = {"name": "sergio"}
     access_token: str = sign_in.json()["access_token"]
 
     await async_client.post(
-        "/api/profiles",
+        "/profiles",
         json=payload,
         headers={
             "Authorization": f"Bearer {access_token}",
@@ -39,7 +39,15 @@ async def test_profile_exists(async_client: AsyncClient, sign_in: Response):
         },
     )
 
-    res: Response = await async_client.post("/api/profiles", json=payload)
+    res: Response = await async_client.post(
+        "/profiles",
+        json=payload,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "env": "testing",
+            "X-API-Version": "1",
+        },
+    )
     json_res = res.json()
 
     assert res.status_code == 201
@@ -47,12 +55,12 @@ async def test_profile_exists(async_client: AsyncClient, sign_in: Response):
 
 
 @pytest.mark.asyncio
-async def test_wrong_name_type(async_client: AsyncClient, sign_in: Response):
+async def test_wrong_name_type(async_client: AsyncClient, set_state, sign_in: Response):
     payload: dict = {"name": 2}
     access_token: str = sign_in.json()["access_token"]
 
     res: Response = await async_client.post(
-        "/api/profiles",
+        "/profiles",
         json=payload,
         headers={
             "Authorization": f"Bearer {access_token}",
@@ -65,12 +73,12 @@ async def test_wrong_name_type(async_client: AsyncClient, sign_in: Response):
 
 
 @pytest.mark.asyncio
-async def test_invalid_name(async_client: AsyncClient, sign_in: Response):
+async def test_invalid_name(async_client: AsyncClient, set_state, sign_in: Response):
     payload: dict = {"name": "not342a6665name"}
     access_token: str = sign_in.json()["access_token"]
 
     res: Response = await async_client.post(
-        "/api/profiles",
+        "/profiles",
         json=payload,
         headers={
             "Authorization": f"Bearer {access_token}",
@@ -84,7 +92,7 @@ async def test_invalid_name(async_client: AsyncClient, sign_in: Response):
 
 @pytest.mark.asyncio
 async def test_get_profiles(
-    seed_database, async_client: AsyncClient, sign_in: Response
+    seed_database, async_client: AsyncClient, set_state, sign_in: Response
 ):
     access_token: str = sign_in.json()["access_token"]
 
@@ -102,7 +110,9 @@ async def test_get_profiles(
 
 
 @pytest.mark.asyncio
-async def test_get_profiles_not_found(async_client: AsyncClient, sign_in: Response):
+async def test_get_profiles_not_found(
+    async_client: AsyncClient, set_state, sign_in: Response
+):
     access_token: str = sign_in.json()["access_token"]
     res: Response = await async_client.get(
         "/profiles",
@@ -116,7 +126,7 @@ async def test_get_profiles_not_found(async_client: AsyncClient, sign_in: Respon
 
 
 @pytest.mark.asyncio
-async def test_export_csv(async_client: AsyncClient, sign_in: Response):
+async def test_export_csv(async_client: AsyncClient, seed_database, set_state, sign_in: Response):
     access_token: str = sign_in.json()["access_token"]
     res: Response = await async_client.get(
         "/profiles/export?format=csv",
@@ -126,19 +136,18 @@ async def test_export_csv(async_client: AsyncClient, sign_in: Response):
             "X-API-Version": "1",
         },
     )
-    json_res = res.json()
 
     assert res.status_code == 200
-    assert len(json_res["data"]) >= 1
+    assert "Content-Disposition" in res.headers
 
 
 @pytest.mark.asyncio
-async def test_get_profile(async_client: AsyncClient, sign_in: Response):
+async def test_get_profile(async_client: AsyncClient, set_state, sign_in: Response):
     payload: dict = {"name": "sergio"}
     access_token: str = sign_in.json()["access_token"]
 
     profile_res: Response = await async_client.post(
-        "/api/profiles",
+        "/profiles",
         json=payload,
         headers={
             "Authorization": f"Bearer {access_token}",
@@ -149,18 +158,28 @@ async def test_get_profile(async_client: AsyncClient, sign_in: Response):
 
     profile_id: str = profile_res.json()["data"]["id"]
 
-    res = await async_client.get(f"/api/profiles/{profile_id}")
+    res = await async_client.get(
+        f"/profiles/{profile_id}",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "env": "testing",
+            "X-API-Version": "1",
+        },
+    )
     json_res = res.json()
 
     assert json_res["data"]["name"] == payload.get("name")
 
 
 @pytest.mark.asyncio
-async def test_unauthorized_get_profile(async_client: AsyncClient):
+async def test_unauthorized_get_profile(
+    async_client: AsyncClient,
+    set_state,
+):
     payload: dict = {"name": "sergio"}
 
     res: Response = await async_client.post(
-        "/api/profiles",
+        "/profiles",
         json=payload,
     )
 
@@ -168,12 +187,14 @@ async def test_unauthorized_get_profile(async_client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_get_profile_not_found(async_client: AsyncClient, sign_in: Response):
+async def test_get_profile_not_found(
+    async_client: AsyncClient, set_state, sign_in: Response
+):
     profile_id: UUID = uuid7()
     access_token: str = sign_in.json()["access_token"]
 
     res = await async_client.get(
-        f"/api/profiles/{profile_id}",
+        f"/profiles/{profile_id}",
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",
@@ -186,7 +207,7 @@ async def test_get_profile_not_found(async_client: AsyncClient, sign_in: Respons
 
 @pytest.mark.asyncio
 async def test_search_profile(
-    seed_database, async_client: AsyncClient, sign_in: Response
+    seed_database, async_client: AsyncClient, set_state, sign_in: Response
 ):
     search_query: str = "young male"
     access_token: str = sign_in.json()["access_token"]
@@ -207,7 +228,7 @@ async def test_search_profile(
 
 @pytest.mark.asyncio
 async def test_invalid_query(
-    seed_database, async_client: AsyncClient, sign_in: Response
+    seed_database, async_client: AsyncClient, set_state, sign_in: Response
 ):
     search_query: str = "boy with name samson"
     access_token: str = sign_in.json()["access_token"]
@@ -225,12 +246,12 @@ async def test_invalid_query(
 
 
 @pytest.mark.asyncio
-async def test_delete_profile(async_client: AsyncClient, sign_in: Response):
+async def test_delete_profile(async_client: AsyncClient, set_state, sign_in: Response):
     payload: dict = {"name": "sergio"}
     access_token: str = sign_in.json()["access_token"]
 
     profile_res: Response = await async_client.post(
-        "/api/profiles",
+        "/profiles",
         json=payload,
         headers={
             "Authorization": f"Bearer {access_token}",
@@ -240,6 +261,13 @@ async def test_delete_profile(async_client: AsyncClient, sign_in: Response):
     )
 
     profile_id: str = profile_res.json()["data"]["id"]
-    res = await async_client.delete(f"/api/profiles/{profile_id}")
+    res = await async_client.delete(
+        f"/profiles/{profile_id}",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "env": "testing",
+            "X-API-Version": "1",
+        },
+    )
 
     assert res.status_code == 204

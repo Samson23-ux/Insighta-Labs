@@ -1,10 +1,10 @@
-import csv
+import aiocsv
 import aiofiles
 import pycountry
 from uuid import UUID
 from uuid6 import uuid7
 from pathlib import Path
-from datetime import datetime , timezone
+from datetime import datetime, timezone
 from sqlalchemy import Sequence, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.elements import BooleanClauseList
@@ -464,13 +464,21 @@ class ProfileServiceV1:
             for profile in profiles:
                 profiles_out.append(ProfileSchema.model_validate(profile))
 
-            next_page: str | None = f"/api/profiles?page={str(page+1)}&limit={str(limit)}" if page < 203 else None
-            prev_page: str | None = f"/api/profiles?page={str(page-1)}&limit={str(limit)}" if page > 1 else None
+            next_page: str | None = (
+                f"/api/profiles?page={str(page+1)}&limit={str(limit)}"
+                if page < 203
+                else None
+            )
+            prev_page: str | None = (
+                f"/api/profiles?page={str(page-1)}&limit={str(limit)}"
+                if page > 1
+                else None
+            )
 
             links: dict = {
                 "self": f"/api/profiles?page={str(page)}&limit={str(limit)}",
                 "next": next_page,
-                "prev": prev_page
+                "prev": prev_page,
             }
 
             data["links"] = links
@@ -519,14 +527,22 @@ class ProfileServiceV1:
 
             for profile in profiles:
                 profiles_out.append(ProfileSchema.model_validate(profile))
-                
-            next_page: str | None = f"/api/profiles?page={str(page+1)}&limit={str(limit)}" if page < 203 else None
-            prev_page: str | None = f"/api/profiles?page={str(page-1)}&limit={str(limit)}" if page > 1 else None
+
+            next_page: str | None = (
+                f"/api/profiles?page={str(page+1)}&limit={str(limit)}"
+                if page < 203
+                else None
+            )
+            prev_page: str | None = (
+                f"/api/profiles?page={str(page-1)}&limit={str(limit)}"
+                if page > 1
+                else None
+            )
 
             links: dict = {
                 "self": f"/api/profiles?page={str(page)}&limit={str(limit)}",
                 "next": next_page,
-                "prev": prev_page
+                "prev": prev_page,
             }
 
             data["links"] = links
@@ -566,29 +582,35 @@ class ProfileServiceV1:
             sort_by,
             order,
             page,
-            limit
+            limit,
         )
 
         profiles: list[ProfileSchema] = data.get("profiles")
+        profile_data: list[dict] = [p.model_dump() for p in profiles]
 
-        profile_dict: list[dict] = [p.model_dump() for p in profiles]
+        export_filename: str = f"profiles_{datetime.now(timezone.utc).isoformat()}.csv"
 
-        profile_data: list[list[str]] = []
-        for profile in profile_dict:
-            rows = []
-            for _, v in profile.items():
-                rows.append(v)
-            profile_data.append(rows)
+        valid_filename: str = export_filename.replace(":", "-").replace("+", "_")
+        export_path: Path = Path(__file__).parent.parent.parent / "exports" / valid_filename
 
-        export_filename: str = f"profiles_{datetime.now(timezone.utc).isoformat()}"
-        export_path: Path = Path(__file__ ).parent.parent / "exports" / export_filename
-        profiles_headers = ["id", "name", "gender", "gender_probability", "age", "age_group", "country_id", "country_name", "country_probability", "created"]
+        profiles_headers = [
+            "id",
+            "name",
+            "gender",
+            "gender_probability",
+            "age",
+            "age_group",
+            "country_id",
+            "country_name",
+            "country_probability",
+            "created_at",
+        ]
 
-        async with aiofiles.open(export_path, "a") as f:
-            writer = csv.DictWriter(f, fieldnames=profiles_headers)
+        async with aiofiles.open(export_path, "w", newline="") as f:
+            writer = aiocsv.AsyncDictWriter(f, fieldnames=profiles_headers)
 
-            writer.writeheader()
-            writer.writerows(profile_data)
+            await writer.writeheader()
+            await writer.writerows(profile_data)
 
         return export_path
 
@@ -669,7 +691,7 @@ class ProfileServiceV1:
             age=age,
             age_group=age_group,
             country_id=country.get("country_id"),
-            country_name=country_name,
+            country_name=country_name.name,
             country_probability=country.get("probability"),
         )
 
