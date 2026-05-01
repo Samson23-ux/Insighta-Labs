@@ -2,10 +2,10 @@
 
 Central API server for the Insighta Labs+ Profile Intelligence System. Serves as the single source of truth for authentication, user management, profile data, and access control across all interfaces.
 
-**Live API:** _[link to be added]_
+**Live API:** [https://perpetual-illumination-production-af59.up.railway.app](https://perpetual-illumination-production-af59.up.railway.app)
 
 **Related repositories:**
-- CLI: `https://github.com/Samson23-ux/Insighta-Labs-Cli` — terminal interface with GitHub OAuth + PKCE
+- CLI: [https://github.com/Samson23-ux/Insighta-Labs-Cli](https://github.com/Samson23-ux/Insighta-Labs-Cli) — terminal interface with GitHub OAuth + PKCE
 - Web Portal: _[link to be added]_ — browser-based interface for non-technical users
 
 ---
