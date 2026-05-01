@@ -8,11 +8,13 @@ from fastapi import APIRouter, Depends, Query, Request, Header
 
 
 from app.api.models.users import User
-from app.core.exceptions import VersionError
 from app.api.services.profile_service import profile_service_v1
+from app.core.exceptions import VersionError, InvalidFormatError
 from app.dependencies import get_session, get_client, required_roles
 from app.api.schemas.profiles import (
     ProfileV1,
+    ProfileStatV1,
+    StatResponseV1,
     ProfileExistV1,
     ProfileCreateV1,
     ProfileResponseV1,
@@ -175,6 +177,9 @@ async def export_csv(
         str, Query(description="Set the total profiles to return per page")
     ] = "10",
 ):
+    if format.lower() != "csv":
+        raise InvalidFormatError(format)
+
     if not x_api_version:
         raise VersionError()
 
@@ -199,6 +204,25 @@ async def export_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@profile_router_v1.get(
+    "/profiles/stats",
+    status_code=200,
+    response_model=StatResponseV1,
+    description="Get a profile stats",
+)
+async def get_stats(
+    request: Request,
+    x_api_version: Annotated[str, Header()],
+    _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
+    session: Annotated[AsyncSession, Depends(get_session)],
+):
+    if not x_api_version:
+        raise VersionError()
+
+    stats: ProfileStatV1 = await profile_service_v1.get_stats(session)
+    return StatResponseV1(data=stats)
 
 
 @profile_router_v1.get(

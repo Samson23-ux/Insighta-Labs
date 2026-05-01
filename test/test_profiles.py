@@ -126,6 +126,27 @@ async def test_get_profiles_not_found(
 
 
 @pytest.mark.asyncio
+async def test_get_stats(
+    async_client: AsyncClient, seed_database, set_state, sign_in: Response
+):
+    access_token: str = sign_in.json()["access_token"]
+
+    res: Response = await async_client.get(
+        "/profiles/stats",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "env": "testing",
+            "X-API-Version": "1",
+        },
+    )
+
+    json_res = res.json()
+
+    assert res.status_code == 200
+    assert "total_profiles" in json_res["data"]
+
+
+@pytest.mark.asyncio
 async def test_export_csv(async_client: AsyncClient, seed_database, set_state, sign_in: Response):
     access_token: str = sign_in.json()["access_token"]
     res: Response = await async_client.get(

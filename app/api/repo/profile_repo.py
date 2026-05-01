@@ -86,6 +86,32 @@ class ProfileRepoV1:
         res = await session.execute(stmt)
         profiles: Sequence[Profile] = res.scalars().all()
         return profiles
+
+    async def get_stats(self, session: AsyncSession) -> dict:
+        # Total profiles
+        total_result = await session.execute(select(func.count(Profile.id)))
+        total: int = total_result.scalar()
+
+        # By gender
+        gender_result = await session.execute(
+            select(Profile.gender, func.count(Profile.id))
+            .group_by(Profile.gender)
+        )
+        by_gender: dict = {row.gender: row.count for row in gender_result if row.gender}
+
+        # Unique countries
+        countries_result = await session.execute(
+            select(func.count(func.distinct(Profile.country_id)))
+        )
+        unique_countries: int = countries_result.scalar()
+
+        stats: dict = {
+            "total": total,
+            "gender_result": by_gender,
+            "unique_countries": unique_countries
+        }
+
+        return stats
     
     async def get_profile(
         self, profile_id: UUID, session: AsyncSession

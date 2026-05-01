@@ -72,7 +72,6 @@ class AuthServiceV1:
 
     async def sign_up_with_github(
         self,
-        url: str,
         code: str,
         url_state: str,
         api_client: str,
@@ -97,7 +96,7 @@ class AuthServiceV1:
                 }
                 header: dict = {"Accept": "application/json"}
 
-                if api_client:
+                if api_client == "web" or api_client == "test":
                     data["client_id"] = settings.GITHUB_CLIENT_ID
                     data["client_secret"] = settings.GITHUB_CLIENT_SECRET
                     data["redirect_uri"] = settings.GITHUB_CALLBACK_URL

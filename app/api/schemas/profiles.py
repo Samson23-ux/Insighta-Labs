@@ -22,13 +22,15 @@ class ProfileCreateV1(BaseModel):
     name: str = None
 
 
-class ProfileResponseV1(BaseModel):
+class BaseResponse(BaseModel):
     status: str = "success"
+
+
+class ProfileResponseV1(BaseResponse):
     data: ProfileV1
 
 
-class PaginatedResponseV1(BaseModel):
-    status: str = "success"
+class PaginatedResponseV1(BaseResponse):
     page: int
     limit: int
     total: int = 2026
@@ -37,5 +39,15 @@ class PaginatedResponseV1(BaseModel):
     data: list[ProfileV1]
 
 
+class ProfileStatV1(BaseModel):
+    total_profiles: int
+    by_gender: dict[str, int]
+    unique_countries: int
+
+
 class ProfileExistV1(ProfileResponseV1):
     message: str = "Profile already exists"
+
+
+class StatResponseV1(BaseResponse):
+    data: ProfileStatV1

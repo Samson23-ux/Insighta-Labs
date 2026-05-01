@@ -124,7 +124,7 @@ async def create_admin(async_session: AsyncSession):
 @pytest_asyncio.fixture
 async def sign_in(async_client: AsyncClient):
     sign_in_res: Response = await async_client.get(
-        "/auth/github?api_client=web",
+        "/auth/github?api_client=test",
         follow_redirects=False,
         headers={
             "X-API-Version": "1",

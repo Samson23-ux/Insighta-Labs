@@ -49,8 +49,9 @@ async def sign_in(
     client_data: dict = {"state": state, "code_verifier": code_verifier}
 
     if api_client:
-        if api_client.lower() != "web":
-            raise InvalidParameterError(param="client")
+        accepted_clients: list = ["web", "cli", "test"]
+        if api_client.lower() not in accepted_clients:
+            raise InvalidParameterError(param=api_client)
         else:
             client_data["client"] = api_client.lower()
 
@@ -100,13 +101,12 @@ async def github_callback(
     client_data: dict = request.session.get("client_data")
     api_client: str = client_data.get("client")
 
-    if api_client:
+    if api_client == "web" or api_client == "test":
         github_client = request.app.state.github
         saved_state: str = client_data.get("state")
         code_verifier: str = client_data.get("code_verifier")
 
     auth_tokens, user_profile = await auth_service_v1.sign_up_with_github(
-        request.url,
         code,
         state,
         api_client,
@@ -116,7 +116,7 @@ async def github_callback(
         session,
     )
 
-    if api_client:
+    if api_client == "web":
         response.set_cookie(
             key="access_token",
             value=auth_tokens["access_token"],
@@ -151,7 +151,6 @@ async def get_user(
     request: Request,
     x_api_version: Annotated[str, Header()],
     curr_user: Annotated[User, Depends(get_current_active_user)],
-    session: Annotated[AsyncSession, Depends(get_session)],
 ):
     if not x_api_version:
         raise VersionError()

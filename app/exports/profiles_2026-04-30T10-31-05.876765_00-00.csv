@@ -1,9 +1,0 @@
-id,name,gender,gender_probability,age,age_group,country_id,country_name,country_probability,created_at
-019db6ba-8aab-7897-9d17-63c05acd16ae,Nandi Achieng,female,0.83,13,teenager,KE,Kenya,0.36,2026-04-22 19:46:11.236916+00:00
-019db6ba-88b9-77c8-b63a-f5264e10ffb1,Rakiya Otieno,female,0.97,14,teenager,KE,Kenya,0.38,2026-04-22 19:46:11.234322+00:00
-019db6ba-8ef9-7902-a242-fd9cbdc5a925,Mumbi Abebe,female,0.66,15,teenager,KE,Kenya,0.63,2026-04-22 19:46:11.242558+00:00
-019db6ba-9035-730b-9735-c2ab3e941f7a,Almaz Mohamed,female,0.9,16,teenager,KE,Kenya,0.81,2026-04-22 19:46:11.244256+00:00
-019db6ba-8dcc-75cf-bcf9-d4b98e8aa64d,Nompumelelo Mthembu,female,0.72,18,teenager,KE,Kenya,0.84,2026-04-22 19:46:11.241029+00:00
-019db6ba-8b85-7128-a4c3-65a3e2d60c20,Hafsat Elmi,female,0.67,18,teenager,KE,Kenya,0.26,2026-04-22 19:46:11.238101+00:00
-019db6ba-8e92-7eca-81e1-5f1bf8aa8df9,Maryam Omar,female,0.74,19,teenager,KE,Kenya,0.65,2026-04-22 19:46:11.242040+00:00
-019db6ba-88fe-76a7-a1ed-de0a74149a00,Awino Jama,female,0.91,19,teenager,KE,Kenya,0.49,2026-04-22 19:46:11.234699+00:00
