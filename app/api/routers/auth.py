@@ -182,8 +182,8 @@ async def create_access_token(
         raise VersionError()
 
     if api_client:
-        if api_client.lower() != "web":
-            raise InvalidParameterError(param="client")
+        if api_client.lower() != "web" or api_client.lower() != "test":
+            raise InvalidParameterError(param=api_client)
         else:
             web_client: bool = True
 
