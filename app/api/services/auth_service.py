@@ -109,9 +109,7 @@ class AuthServiceV1:
                     data["client_secret"] = settings.GITHUB_CLI_CLIENT_SECRET
                     data["redirect_uri"] = settings.REDIRECT_CLI_URI
 
-                    client = AsyncClient(
-                        base_url=settings.AGIFY_API_URL, timeout=10.0
-                    )
+                    client = AsyncClient(base_url=settings.AGIFY_API_URL, timeout=10.0)
                     res: Response = await client.post(
                         settings.GITHUB_ACCESS_TOKEN_URL, data=data, headers=header
                     )
@@ -191,7 +189,7 @@ class AuthServiceV1:
             "id": user_profile["id"],
             "username": user_profile["login"],
             "email": user_profile["email"],
-            "avatar_url": user_profile["avatar_url"]
+            "avatar_url": user_profile["avatar_url"],
         }
 
         return auth_tokens, user_profile_out
