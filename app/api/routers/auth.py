@@ -81,9 +81,6 @@ async def github_callback(
     response: Response,
     x_api_version: Annotated[str, Header()],
     session: Annotated[AsyncSession, Depends(get_session)],
-    # api_client: Annotated[
-    #     str, Query(description="Client attribute must be set to web for web clients")
-    # ] = None,
     error: str = None,
     state: str = None,
     code: str = None,
@@ -91,6 +88,7 @@ async def github_callback(
 ):
     saved_state = None
     github_client = None
+    api_client = None
 
     if not x_api_version:
         raise VersionError()
@@ -99,7 +97,9 @@ async def github_callback(
         raise AuthorizationError()
     
     client_data: dict = request.session.get("client_data")
-    api_client: str = client_data.get("client")
+
+    if client_data:
+        api_client: str = client_data.get("client")
 
     if api_client == "web" or api_client == "test":
         github_client = request.app.state.github
