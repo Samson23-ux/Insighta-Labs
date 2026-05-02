@@ -12,9 +12,9 @@ from slowapi import _rate_limit_exceeded_handler
 
 from app.limiter import limiter
 from app.core.config import settings
-from app.core import exception_handlers     # noqa: F401
 from app.api.routers.auth import auth_router_v1
 from app.api.routers.profiles import profile_router_v1
+from app.core.exception_handlers import ExceptionHandlers
 
 
 @asynccontextmanager
@@ -35,6 +35,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.API_TITLE, version=settings.API_VERSION, lifespan=lifespan)
+
+
+exception_handers = ExceptionHandlers(app)
+
+exception_handers.register_exceptions()
 
 
 app.add_middleware(

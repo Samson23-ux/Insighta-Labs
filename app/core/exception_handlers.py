@@ -1,8 +1,6 @@
-from fastapi import Request
+from fastapi import Request, FastAPI
 from fastapi.responses import JSONResponse
 
-
-from app.main import app
 from app.core.exceptions import (
     QueryError,
     ServerError,
@@ -25,189 +23,196 @@ from app.core.exceptions import (
 )
 
 
-@app.exception_handler(ServerError)
-async def server_error(request: Request, exc: AppException):
-    return JSONResponse(
-        content={"status": "error", "message": "Oops! Something went wrong!"},
-        status_code=500,
-    )
+class ExceptionHandlers:
+    def __init__(self, app: FastAPI):
+        self.app = app
+
+    def register_exceptions(self):
+        @self.app.exception_handler(ServerError)
+        async def server_error(request: Request, exc: AppException):
+            return JSONResponse(
+                content={
+                    "status": "error", "message": "Oops! Something went wrong!"
+                },
+                status_code=500,
+            )
 
 
-app.add_exception_handler(
-    InvalidTypeError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "Invalid query parameters",
-        },
-        status_code=422,
-    ),
-)
+        self.app.add_exception_handler(
+            InvalidTypeError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "Invalid query parameters",
+                },
+                status_code=422,
+            ),
+        )
 
 
-app.add_exception_handler(
-    ParameterError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "{param} parameter not passed",
-        },
-        status_code=400,
-    ),
-)
+        self.app.add_exception_handler(
+            ParameterError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "{param} parameter not passed",
+                },
+                status_code=400,
+            ),
+        )
 
 
-app.add_exception_handler(
-    InvalidParameterError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "{param} parameter value not recognized",
-        },
-        status_code=400,
-    ),
-)
+        self.app.add_exception_handler(
+            InvalidParameterError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "{param} parameter value not recognized",
+                },
+                status_code=400,
+            ),
+        )
 
 
-app.add_exception_handler(
-    QueryError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "Unable to interpret query",
-        },
-        status_code=400,
-    ),
-)
+        self.app.add_exception_handler(
+            QueryError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "Unable to interpret query",
+                },
+                status_code=400,
+            ),
+        )
 
 
-app.add_exception_handler(
-    ProfilesNotFoundError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "No profiles found at the moment! Check back later",
-        },
-        status_code=404,
-    ),
-)
+        self.app.add_exception_handler(
+            ProfilesNotFoundError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "No profiles found at the moment! Check back later",
+                },
+                status_code=404,
+            ),
+        )
 
 
-app.add_exception_handler(
-    VersionError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "API version header required",
-        },
-        status_code=400,
-    ),
-)
+        self.app.add_exception_handler(
+            VersionError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "API version header required",
+                },
+                status_code=400,
+            ),
+        )
 
 
-app.add_exception_handler(
-    MissingNameError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "Name parameter missing",
-        },
-        status_code=400,
-    ),
-)
+        self.app.add_exception_handler(
+            MissingNameError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "Name parameter missing",
+                },
+                status_code=400,
+            ),
+        )
 
 
-app.add_exception_handler(
-    CheckTimeoutError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "Ensure the device is connected to the internet",
-        },
-        status_code=408,
-    ),
-)
+        self.app.add_exception_handler(
+            CheckTimeoutError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "Ensure the device is connected to the internet",
+                },
+                status_code=408,
+            ),
+        )
 
 
-app.add_exception_handler(
-    ResponseError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "{external_api} returned an invalid response",
-        },
-        status_code=502,
-    ),
-)
+        self.app.add_exception_handler(
+            ResponseError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "{external_api} returned an invalid response",
+                },
+                status_code=502,
+            ),
+        )
 
 
-app.add_exception_handler(
-    ProfileNotFoundError,
-    create_exception_handler(
-        initial_detail={
-            "status": "error",
-            "message": "Profile not found with id {profile_id}",
-        },
-        status_code=404,
-    ),
-)
+        self.app.add_exception_handler(
+            ProfileNotFoundError,
+            create_exception_handler(
+                initial_detail={
+                    "status": "error",
+                    "message": "Profile not found with id {profile_id}",
+                },
+                status_code=404,
+            ),
+        )
 
 
-app.add_exception_handler(
-    exc_class_or_status_code=AuthenticationError,
-    handler=create_exception_handler(
-        status_code=401,
-        initial_detail={
-            "status": "error",
-            "message": "User is not authenticated",
-        },
-    ),
-)
+        self.app.add_exception_handler(
+            exc_class_or_status_code=AuthenticationError,
+            handler=create_exception_handler(
+                status_code=401,
+                initial_detail={
+                    "status": "error",
+                    "message": "User is not authenticated",
+                },
+            ),
+        )
 
 
-app.add_exception_handler(
-    exc_class_or_status_code=AuthorizationError,
-    handler=create_exception_handler(
-        status_code=403,
-        initial_detail={
-            "status": "error",
-            "message": "User is not authorized to make the requested action",
-        },
-    ),
-)
+        self.app.add_exception_handler(
+            exc_class_or_status_code=AuthorizationError,
+            handler=create_exception_handler(
+                status_code=403,
+                initial_detail={
+                    "status": "error",
+                    "message": "User is not authorized to make the requested action",
+                },
+            ),
+        )
 
 
-app.add_exception_handler(
-    exc_class_or_status_code=UserNotFoundError,
-    handler=create_exception_handler(
-        status_code=404,
-        initial_detail={
-            "status": "error",
-            "message": "User with id not found with id {user_id}",
-        },
-    ),
-)
+        self.app.add_exception_handler(
+            exc_class_or_status_code=UserNotFoundError,
+            handler=create_exception_handler(
+                status_code=404,
+                initial_detail={
+                    "status": "error",
+                    "message": "User with id not found with id {user_id}",
+                },
+            ),
+        )
 
 
-app.add_exception_handler(
-    exc_class_or_status_code=InvalidFormatError,
-    handler=create_exception_handler(
-        status_code=400,
-        initial_detail={
-            "status": "error",
-            "message": "{format_name} not supported",
-        },
-    ),
-)
+        self.app.add_exception_handler(
+            exc_class_or_status_code=InvalidFormatError,
+            handler=create_exception_handler(
+                status_code=400,
+                initial_detail={
+                    "status": "error",
+                    "message": "{format_name} not supported",
+                },
+            ),
+        )
 
 
-app.add_exception_handler(
-    exc_class_or_status_code=UnverifiedEmailError,
-    handler=create_exception_handler(
-        status_code=400,
-        initial_detail={
-            "status": "error",
-            "message": "Email not verified",
-        },
-    ),
-)
+        self.app.add_exception_handler(
+            exc_class_or_status_code=UnverifiedEmailError,
+            handler=create_exception_handler(
+                status_code=400,
+                initial_detail={
+                    "status": "error",
+                    "message": "Email not verified",
+                },
+            ),
+        )
