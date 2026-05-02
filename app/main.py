@@ -14,6 +14,7 @@ from app.limiter import limiter
 from app.core.config import settings
 from app.api.routers.auth import auth_router_v1
 from app.api.routers.profiles import profile_router_v1
+from app.core.exception_handlers import ExceptionHandlers
 
 
 @asynccontextmanager
@@ -34,6 +35,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.API_TITLE, version=settings.API_VERSION, lifespan=lifespan)
+
+
+exception_handers = ExceptionHandlers(app)
+
+exception_handers.register_exceptions()
 
 
 app.add_middleware(
@@ -87,6 +93,3 @@ async def home():
         "message": "Welcome to Profile Management and Query API!",
     }
     return message
-
-
-from app.core import exception_handlers

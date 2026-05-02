@@ -25,8 +25,8 @@ from app.database.base import Base
 from app.core.config import settings
 from app.api.models.users import User
 from app.dependencies import get_session
-from app.api.models.profiles import Profile
-from app.api.models.auth import RefreshToken
+from app.api.models.profiles import Profile  # noqa: F401
+from app.api.models.auth import RefreshToken # noqa: F401
 from app.api.services.user_service import user_service_v1
 from app.api.services.profile_service import profile_service_v1
 
