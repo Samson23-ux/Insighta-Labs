@@ -14,7 +14,11 @@ from httpx import AsyncClient, Response, ConnectTimeout, ConnectError
 from app.api.models.profiles import Profile
 from app.api.repo.profile_repo import profile_repo_v1
 from app.utils import is_integer, is_number, is_float
-from app.api.schemas.profiles import ProfileCreateV1, ProfileStatV1, ProfileV1 as ProfileSchema
+from app.api.schemas.profiles import (
+    ProfileCreateV1,
+    ProfileStatV1,
+    ProfileV1 as ProfileSchema,
+)
 from app.core.exceptions import (
     QueryError,
     ServerError,
@@ -591,7 +595,9 @@ class ProfileServiceV1:
         export_filename: str = f"profiles_{datetime.now(timezone.utc).isoformat()}.csv"
 
         valid_filename: str = export_filename.replace(":", "-").replace("+", "_")
-        export_path: Path = Path(__file__).parent.parent.parent / "exports" / valid_filename
+        export_path: Path = (
+            Path(__file__).parent.parent.parent / "exports" / valid_filename
+        )
 
         profiles_headers = [
             "id",
@@ -625,7 +631,7 @@ class ProfileServiceV1:
             profile_stat: ProfileStatV1 = ProfileStatV1(
                 total_profiles=total_profiles,
                 by_gender=by_gender,
-                unique_countries=unique_countries
+                unique_countries=unique_countries,
             )
 
             return profile_stat
