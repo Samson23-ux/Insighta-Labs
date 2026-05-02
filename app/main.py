@@ -12,6 +12,7 @@ from slowapi import _rate_limit_exceeded_handler
 
 from app.limiter import limiter
 from app.core.config import settings
+from app.core import exception_handlers     # noqa: F401
 from app.api.routers.auth import auth_router_v1
 from app.api.routers.profiles import profile_router_v1
 
@@ -87,6 +88,3 @@ async def home():
         "message": "Welcome to Profile Management and Query API!",
     }
     return message
-
-
-from app.core import exception_handlers

@@ -7,9 +7,9 @@ from alembic import context
 
 from app.database.base import Base
 from app.core.config import settings
-from app.api.models.users import User
-from app.api.models.profiles import Profile
-from app.api.models.auth import RefreshToken
+from app.api.models.users import User           # noqa: F401
+from app.api.models.profiles import Profile     # noqa: F401
+from app.api.models.auth import RefreshToken    # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
