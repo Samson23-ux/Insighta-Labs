@@ -44,6 +44,7 @@ jobs:
       GITHUB_USER_URL: https://api.github.com/user
       NATIONALIZE_API_URL: https://api.nationalize.io
       REDIRECT_CLI_URI: http://127.0.0.1:5000/callback
+      GITHUB_EMAIL_URL: https://api.github.com/user/emails
       GITHUB_AUTHORIZE_URL: https://github.com/login/oauth/authorize
       GITHUB_CALLBACK_URL: http://localhost:8000/api/auth/github/callback
       GITHUB_ACCESS_TOKEN_URL: https://github.com/login/oauth/access_token
