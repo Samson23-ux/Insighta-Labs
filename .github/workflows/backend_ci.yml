@@ -23,6 +23,30 @@ jobs:
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
       GITHUB_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
       GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+      SYNC_DB_URL: ${{ secrets.SYNC_DB_URL }}
+      ASYNC_DB_URL: ${{ secrets.ASYNC_DB_URL }}
+      ASYNC_TEST_DB_URL: ${{ secrets.ASYNC_TEST_DB_URL }}
+      ACCESS_TOKEN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      REFRESH_TOKEN_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      GITHUB_CLI_CLIENT_ID: ${{ secrets.OAUTH_CLI_CLIENT_ID }}
+      GITHUB_CLI_CLIENT_SECRET: ${{ secrets.OAUTH_CLI_CLIENT_SECRET }}
+      ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+      SESSION_SECRET_KEY: ${{ secrets.SECRET_KEY }}
+
+      # hardcoded
+      ENVIRONMENT: local
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_TIME: 3
+      REFRESH_TOKEN_EXPIRE_TIME: 5
+      AGIFY_API_URL: https://api.agify.io
+      FRONTEND_URL: http://localhost:5173
+      GENDERIZE_API_URL: https://api.genderize.io
+      GITHUB_USER_URL: https://api.github.com/user
+      NATIONALIZE_API_URL: https://api.nationalize.io
+      REDIRECT_CLI_URI: http://127.0.0.1:5000/callback
+      GITHUB_AUTHORIZE_URL: https://github.com/login/oauth/authorize
+      GITHUB_CALLBACK_URL: http://localhost:8000/api/auth/github/callback
+      GITHUB_ACCESS_TOKEN_URL: https://github.com/login/oauth/access_token
 
     steps:
       - uses: actions/checkout@v4
