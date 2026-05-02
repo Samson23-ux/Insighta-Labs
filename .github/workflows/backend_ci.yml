@@ -1,3 +1,5 @@
+name: Backend CI
+
 on:
   pull_request:
     branches: [main]
@@ -15,19 +17,12 @@ jobs:
           POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
         ports:
           - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U $POSTGRES_USER"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
 
     env:
       DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
-      GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
-      ACCESS_TOKEN_EXPIRY: ${{ secrets.ACCESS_TOKEN_EXPIRY }}
-      REFRESH_TOKEN_EXPIRY: ${{ secrets.REFRESH_TOKEN_EXPIRY }}
+      GITHUB_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+      GITHUB_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
 
     steps:
       - uses: actions/checkout@v4
