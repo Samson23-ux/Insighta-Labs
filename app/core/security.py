@@ -12,7 +12,7 @@ from app.api.models.auth import RefreshToken
 from app.api.schemas.auth import TokenDataV1
 
 
-async def hash_token(token: str):
+async def hash_string(token: str):
     token_bytes: bytes = token.encode(encoding="utf-8")
     return hashlib.sha256(token_bytes).hexdigest()
 
@@ -88,7 +88,7 @@ async def prepare_tokens(user_id: UUID, token_data: TokenDataV1) -> dict:
 
     refresh_token_db: RefreshToken = RefreshToken(
         id=token_id,
-        token=await hash_token(refresh_token),
+        token=await hash_string(refresh_token),
         user_id=user_id,
         expires_at=token_exp,
     )

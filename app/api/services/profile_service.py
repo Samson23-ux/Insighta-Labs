@@ -4,6 +4,7 @@ import pycountry
 from uuid import UUID
 from uuid6 import uuid7
 from pathlib import Path
+from fastapi import UploadFile
 from datetime import datetime, timezone
 from sqlalchemy import Sequence, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,7 @@ from sqlalchemy.sql.elements import BooleanClauseList
 from httpx import AsyncClient, Response, ConnectTimeout, ConnectError
 
 
+from app.core.security import hash_string
 from app.api.models.profiles import Profile
 from app.api.repo.profile_repo import profile_repo_v1
 from app.utils import is_integer, is_number, is_float
@@ -516,21 +518,28 @@ class ProfileServiceV1:
 
         normalized_query, country_dict = await self.normalize_query(q)
 
-        mapped_query: dict = await self.map_query(normalized_query, country_dict)
+        query_string: str = "".join(normalized_query)
+        cache_key: str = await hash_string(query_string)
+
+        profiles = await profile_repo_v1.get_cached_profiles(cache_key)
 
         try:
-            profiles: Sequence[Profile] = await profile_repo_v1.search_profiles(
-                mapped_query, offset, limit, session
-            )
-
-            if not profiles:
-                raise ProfilesNotFoundError()
-
             data: dict = {}
             profiles_out: list[ProfileSchema] = []
 
-            for profile in profiles:
-                profiles_out.append(ProfileSchema.model_validate(profile))
+            if profiles:
+                pass
+            else:
+                mapped_query: dict = await self.map_query(normalized_query, country_dict)
+                profiles: Sequence[Profile] = await profile_repo_v1.search_profiles(
+                    mapped_query, offset, limit, session
+                )
+
+                if not profiles:
+                    raise ProfilesNotFoundError()
+
+                for profile in profiles:
+                    profiles_out.append(ProfileSchema.model_validate(profile))
 
             next_page: str | None = (
                 f"/api/profiles?page={str(page+1)}&limit={str(limit)}"

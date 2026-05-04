@@ -87,6 +87,9 @@ class ProfileRepoV1:
         profiles: Sequence[Profile] = res.scalars().all()
         return profiles
 
+    async def get_cached_profiles(self, cache_key: str):
+        pass
+
     async def get_stats(self, session: AsyncSession) -> dict:
         # Total profiles
         total_result = await session.execute(select(func.count(Profile.id)))
