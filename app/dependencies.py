@@ -1,7 +1,7 @@
 import httpx
 from uuid import UUID
 from typing import Annotated
-from redis.asyncio import redis, Redis
+from redis.asyncio import Redis
 from fastapi import Request, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -27,8 +27,8 @@ async def get_session():
 
 async def get_redis_db():
     try:
-        redis_client: Redis = redis.Redis(
-            host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_response=True
+        redis_client: Redis = Redis(
+            host=settings.REDIS_HOST, port=settings.REDIS_PORT, decode_responses=True
         )
         yield redis_client
     finally:

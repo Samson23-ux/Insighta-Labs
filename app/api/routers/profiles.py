@@ -76,6 +76,8 @@ async def get_all_profiles(
         raise VersionError()
 
     data: dict = await profile_service_v1.get_profiles(
+        request,
+        redis_db,
         session,
         gender,
         age_group,

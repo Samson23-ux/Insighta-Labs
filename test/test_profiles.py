@@ -97,7 +97,7 @@ async def test_get_profiles(
     access_token: str = sign_in.json()["access_token"]
 
     res: Response = await async_client.get(
-        "/profiles",
+        "/profiles?gender=male&min_age=20",
         headers={
             "Authorization": f"Bearer {access_token}",
             "env": "testing",

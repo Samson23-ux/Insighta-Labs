@@ -451,9 +451,11 @@ class ProfileServiceV1:
 
         try:
             params: list[str] = [v for _, v in request.query_params.items()]
-            cache_key: str = hash_string("".join(params))
+            cache_key: str = await hash_string("".join(params))
 
-            profile_string: str = await profile_repo_v1.get_cached_profiles(cache_key, redis_db)
+            profile_string: str = await profile_repo_v1.get_cached_profiles(
+                cache_key, redis_db
+            )
 
             data: dict = {}
             profiles_out: list[ProfileSchema] = []
@@ -484,12 +486,20 @@ class ProfileServiceV1:
 
                 cache_profiles: list = []
                 for profile in profiles:
-                    profile_schema: ProfileSchema = ProfileSchema.model_validate(profile)
+                    profile_schema: ProfileSchema = ProfileSchema.model_validate(
+                        profile
+                    )
+
+                    profile_schema.id = str(profile_schema.id)
+                    profile_schema.created_at = profile_schema.created_at.isoformat()
+
                     profiles_out.append(profile_schema)
                     cache_profiles.append(profile_schema.model_dump())
 
                 cache_strings: str = json.dumps(cache_profiles)
-                await profile_repo_v1.add_profiles_to_cache(cache_key, cache_strings, redis_db)
+                await profile_repo_v1.add_profiles_to_cache(
+                    cache_key, cache_strings, redis_db
+                )
 
             next_page: str | None = (
                 f"/api/profiles?page={str(page+1)}&limit={str(limit)}"
@@ -542,7 +552,9 @@ class ProfileServiceV1:
         query_string: str = "".join(normalized_query)
         cache_key: str = await hash_string(query_string)
 
-        profile_string: str = await profile_repo_v1.get_cached_profiles(cache_key, redis_db)
+        profile_string: str = await profile_repo_v1.get_cached_profiles(
+            cache_key, redis_db
+        )
 
         try:
             data: dict = {}
@@ -554,7 +566,9 @@ class ProfileServiceV1:
                 for profile in profiles:
                     profiles_out.append(ProfileSchema(**profile))
             else:
-                mapped_query: dict = await self.map_query(normalized_query, country_dict)
+                mapped_query: dict = await self.map_query(
+                    normalized_query, country_dict
+                )
                 profiles: Sequence[Profile] = await profile_repo_v1.search_profiles(
                     mapped_query, offset, limit, session
                 )
@@ -564,12 +578,20 @@ class ProfileServiceV1:
 
                 cache_profiles: list = []
                 for profile in profiles:
-                    profile_schema: ProfileSchema = ProfileSchema.model_validate(profile)
+                    profile_schema: ProfileSchema = ProfileSchema.model_validate(
+                        profile
+                    )
+
+                    profile_schema.id = str(profile_schema.id)
+                    profile_schema.created_at = profile_schema.created_at.isoformat()
+
                     profiles_out.append(profile_schema)
                     cache_profiles.append(profile_schema.model_dump())
 
                 cache_strings: str = json.dumps(cache_profiles)
-                await profile_repo_v1.add_profiles_to_cache(cache_key, cache_strings, redis_db)
+                await profile_repo_v1.add_profiles_to_cache(
+                    cache_key, cache_strings, redis_db
+                )
 
             next_page: str | None = (
                 f"/api/profiles?page={str(page+1)}&limit={str(limit)}"
