@@ -37,6 +37,7 @@ async def get_all_profiles(
     x_api_version: Annotated[str, Header()],
     _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
     session: Annotated[AsyncSession, Depends(get_session)],
+    redis_db: Annotated[Redis, Depends(get_redis_db)],
     gender: Annotated[
         str, Query(description="Filter profiles by gender (male, female)")
     ] = None,
@@ -122,6 +123,7 @@ async def search_for_profiles(
         page,
         limit,
         session,
+        redis_db
     )
 
     links: dict = data.get("links")

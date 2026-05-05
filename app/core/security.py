@@ -12,9 +12,9 @@ from app.api.models.auth import RefreshToken
 from app.api.schemas.auth import TokenDataV1
 
 
-async def hash_string(token: str):
-    token_bytes: bytes = token.encode(encoding="utf-8")
-    return hashlib.sha256(token_bytes).hexdigest()
+async def hash_string(val: str):
+    val_bytes: bytes = val.encode(encoding="utf-8")
+    return hashlib.sha256(val_bytes).hexdigest()
 
 
 async def hash_code_challenge(verifier: str):

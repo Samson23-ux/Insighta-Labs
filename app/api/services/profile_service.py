@@ -1,11 +1,11 @@
+import json
 import aiocsv
 import aiofiles
 import pycountry
-import json
 from uuid import UUID
 from uuid6 import uuid7
 from pathlib import Path
-from fastapi import UploadFile
+from fastapi import Request
 from redis.asyncio import Redis
 from datetime import datetime, timezone
 from sqlalchemy import Sequence, and_, or_
@@ -411,6 +411,8 @@ class ProfileServiceV1:
 
     async def get_profiles(
         self,
+        request: Request,
+        redis_db: Redis,
         session: AsyncSession,
         gender: str | None,
         age_group: str | None,
@@ -448,29 +450,46 @@ class ProfileServiceV1:
         offset: int = (page * limit) - limit
 
         try:
-            profiles: Sequence[Profile] = await profile_repo_v1.get_profiles(
-                session,
-                gender,
-                age_group,
-                country_id,
-                min_age,
-                max_age,
-                min_gender_probability,
-                min_country_probability,
-                sort_by,
-                order,
-                offset,
-                limit,
-            )
+            params: list[str] = [v for _, v in request.query_params.items()]
+            cache_key: str = hash_string("".join(params))
 
-            if not profiles:
-                raise ProfilesNotFoundError()
+            profile_string: str = await profile_repo_v1.get_cached_profiles(cache_key, redis_db)
 
             data: dict = {}
             profiles_out: list[ProfileSchema] = []
 
-            for profile in profiles:
-                profiles_out.append(ProfileSchema.model_validate(profile))
+            if profile_string:
+                profiles: list[dict] = json.loads(profile_string)
+
+                for profile in profiles:
+                    profiles_out.append(ProfileSchema(**profile))
+            else:
+                profiles: Sequence[Profile] = await profile_repo_v1.get_profiles(
+                    session,
+                    gender,
+                    age_group,
+                    country_id,
+                    min_age,
+                    max_age,
+                    min_gender_probability,
+                    min_country_probability,
+                    sort_by,
+                    order,
+                    offset,
+                    limit,
+                )
+
+                if not profiles:
+                    raise ProfilesNotFoundError()
+
+                cache_profiles: list = []
+                for profile in profiles:
+                    profile_schema: ProfileSchema = ProfileSchema.model_validate(profile)
+                    profiles_out.append(profile_schema)
+                    cache_profiles.append(profile_schema.model_dump())
+
+                cache_strings: str = json.dumps(cache_profiles)
+                await profile_repo_v1.add_profiles_to_cache(cache_key, cache_strings, redis_db)
 
             next_page: str | None = (
                 f"/api/profiles?page={str(page+1)}&limit={str(limit)}"
@@ -523,7 +542,7 @@ class ProfileServiceV1:
         query_string: str = "".join(normalized_query)
         cache_key: str = await hash_string(query_string)
 
-        profile_string: str = await profile_repo_v1.get_cached_profiles(cache_key)
+        profile_string: str = await profile_repo_v1.get_cached_profiles(cache_key, redis_db)
 
         try:
             data: dict = {}
@@ -543,9 +562,7 @@ class ProfileServiceV1:
                 if not profiles:
                     raise ProfilesNotFoundError()
 
-                cache_key: str = await hash_string()
                 cache_profiles: list = []
-
                 for profile in profiles:
                     profile_schema: ProfileSchema = ProfileSchema.model_validate(profile)
                     profiles_out.append(profile_schema)

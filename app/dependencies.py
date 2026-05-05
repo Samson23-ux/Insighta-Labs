@@ -10,7 +10,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 from app.api.models.users import User
 from app.core.security import decode_token
-from app.database.session import redis_client
 from app.database.session import async_session
 from app.api.services.user_service import user_service_v1
 from app.core.exceptions import AuthenticationError, AuthorizationError
