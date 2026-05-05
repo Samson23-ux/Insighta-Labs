@@ -1,6 +1,7 @@
 from uuid import UUID
 from pathlib import Path
 from typing import Annotated
+from redis.asyncio import Redis
 from datetime import datetime, timezone
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +11,7 @@ from fastapi import APIRouter, Depends, Query, Request, Header
 from app.api.models.users import User
 from app.api.services.profile_service import profile_service_v1
 from app.core.exceptions import VersionError, InvalidFormatError
-from app.dependencies import get_session, get_client, required_roles
+from app.dependencies import get_session, get_client, required_roles, get_redis_db
 from app.api.schemas.profiles import (
     ProfileV1,
     ProfileStatV1,
@@ -105,6 +106,7 @@ async def search_for_profiles(
     request: Request,
     x_api_version: Annotated[str, Header()],
     _: Annotated[User, Depends(required_roles(["analyst", "admin"]))],
+    redis_db: Annotated[Redis, Depends(get_redis_db)],
     session: Annotated[AsyncSession, Depends(get_session)],
     q: Annotated[str, Query(description="Query field to search for profiles")],
     page: Annotated[str, Query(description="Select what page to view")] = "1",

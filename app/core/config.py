@@ -56,4 +56,8 @@ class Settings(BaseSettings):
     # frontend
     FRONTEND_URL: str
 
+    # redis
+    REDIS_HOST: str
+    REDIS_PORT: int
+
 settings: Settings = Settings()

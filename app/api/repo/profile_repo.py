@@ -1,4 +1,5 @@
 from uuid import UUID
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Sequence, func, desc, insert
 
@@ -87,8 +88,9 @@ class ProfileRepoV1:
         profiles: Sequence[Profile] = res.scalars().all()
         return profiles
 
-    async def get_cached_profiles(self, cache_key: str):
-        pass
+    async def get_cached_profiles(self, cache_key: str, redis_db: Redis) -> str:
+        profiles: str = await redis_db.get(cache_key)
+        return profiles
 
     async def get_stats(self, session: AsyncSession) -> dict:
         # Total profiles
@@ -131,6 +133,12 @@ class ProfileRepoV1:
         res = await session.execute(stmt)
         profile: Profile | None = res.scalar()
         return profile
+    
+    async def add_profiles_to_cache(
+        self, cache_key: str, profile_string: str, redis_db: Redis
+    ):
+        expire_time: int = 60 * 60 * 24     # expire in a day
+        await redis_db.set(cache_key, profile_string, ex=expire_time)
 
     async def add_profile_to_db(self, profile: Profile, session: AsyncSession):
         session.add(profile)

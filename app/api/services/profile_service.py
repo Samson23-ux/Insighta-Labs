@@ -1,10 +1,12 @@
 import aiocsv
 import aiofiles
 import pycountry
+import json
 from uuid import UUID
 from uuid6 import uuid7
 from pathlib import Path
 from fastapi import UploadFile
+from redis.asyncio import Redis
 from datetime import datetime, timezone
 from sqlalchemy import Sequence, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -498,7 +500,7 @@ class ProfileServiceV1:
             raise ServerError() from e
 
     async def search_for_profiles(
-        self, q: str, page: str, limit: str, session: AsyncSession
+        self, q: str, page: str, limit: str, session: AsyncSession, redis_db: Redis
     ) -> dict:
         if not q:
             raise ParameterError()
@@ -521,14 +523,17 @@ class ProfileServiceV1:
         query_string: str = "".join(normalized_query)
         cache_key: str = await hash_string(query_string)
 
-        profiles = await profile_repo_v1.get_cached_profiles(cache_key)
+        profile_string: str = await profile_repo_v1.get_cached_profiles(cache_key)
 
         try:
             data: dict = {}
             profiles_out: list[ProfileSchema] = []
 
-            if profiles:
-                pass
+            if profile_string:
+                profiles: list[dict] = json.loads(profile_string)
+
+                for profile in profiles:
+                    profiles_out.append(ProfileSchema(**profile))
             else:
                 mapped_query: dict = await self.map_query(normalized_query, country_dict)
                 profiles: Sequence[Profile] = await profile_repo_v1.search_profiles(
@@ -538,8 +543,16 @@ class ProfileServiceV1:
                 if not profiles:
                     raise ProfilesNotFoundError()
 
+                cache_key: str = await hash_string()
+                cache_profiles: list = []
+
                 for profile in profiles:
-                    profiles_out.append(ProfileSchema.model_validate(profile))
+                    profile_schema: ProfileSchema = ProfileSchema.model_validate(profile)
+                    profiles_out.append(profile_schema)
+                    cache_profiles.append(profile_schema.model_dump())
+
+                cache_strings: str = json.dumps(cache_profiles)
+                await profile_repo_v1.add_profiles_to_cache(cache_key, cache_strings, redis_db)
 
             next_page: str | None = (
                 f"/api/profiles?page={str(page+1)}&limit={str(limit)}"
