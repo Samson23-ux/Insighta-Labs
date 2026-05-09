@@ -96,7 +96,7 @@ class AuthServiceV1:
                 }
                 header: dict = {"Accept": "application/json"}
 
-                if api_client == "web" or api_client == "test":
+                if api_client == "web" or api_client == "test" or api_client == "swagger":
                     data["client_id"] = settings.GITHUB_CLIENT_ID
                     data["client_secret"] = settings.GITHUB_CLIENT_SECRET
                     data["redirect_uri"] = settings.GITHUB_CALLBACK_URL

@@ -49,7 +49,7 @@ async def sign_in(
     client_data: dict = {"state": state, "code_verifier": code_verifier}
 
     if api_client:
-        accepted_clients: list = ["web", "cli", "test"]
+        accepted_clients: list = ["web", "cli", "test", "swagger"]
         if api_client.lower() not in accepted_clients:
             raise InvalidParameterError(param=api_client)
         else:
@@ -101,7 +101,7 @@ async def github_callback(
     if client_data:
         api_client: str = client_data.get("client")
 
-    if api_client == "web" or api_client == "test":
+    if api_client == "web" or api_client == "test" or api_client == "swagger":
         github_client = request.app.state.github
         saved_state: str = client_data.get("state")
         code_verifier: str = client_data.get("code_verifier")
